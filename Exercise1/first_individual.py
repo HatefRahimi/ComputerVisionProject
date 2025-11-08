@@ -3,7 +3,7 @@ from scipy.io import loadmat
 import matplotlib.pyplot as plt
 from scipy.ndimage import label
 from scipy.ndimage import binary_opening, binary_closing
-from first.py import fit_plane
+from first import fit_plane
 
 np.random.seed(42)
 
