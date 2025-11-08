@@ -3,6 +3,7 @@ from scipy.io import loadmat
 import matplotlib.pyplot as plt
 from scipy.ndimage import label
 from scipy.ndimage import binary_opening, binary_closing
+from first.py import fit_plane
 
 np.random.seed(42)
 
@@ -12,62 +13,51 @@ point_cloud = data['cloud2']
 amplitude_image = data['amplitudes2']
 
 
-def mlesac_plane_fit(points, threshold=1, max_iterations=1000, gamma=None):
-    """
-    Fit a plane using MLESAC (Maximum Likelihood Estimation SAC)
+def fit_plane_linear(point_one, point_two, point_three):
 
-    Parameters:
-    - points: Nx3 array of 3D points
-    - threshold: epsilon - distance threshold for inliers
-    - max_iterations: maximum iterations
-    - gamma: penalty for outliers (if None, uses 3*threshold)
+    points_matrix = np.vstack([point_one, point_two, point_three])
+    constants = np.ones(3)
 
-    Returns:
-    - best_plane: tuple (normal, d) representing the plane
-    - best_inliers: indices of inlier points
-    """
-    # Set gamma if not provided
-    if gamma is None:
-        gamma = 3 * threshold
+    try:
+        normal = np.linalg.solve(points_matrix, constants)
+        d = 1.0
+        return normal, d
+    except np.linalg.LinAlgError:
+        return None, None
 
+
+def mlesac_plane_fit(points, threshold=0.02, max_iterations=1000, gamma=None):
+    """MLESAC for plane fitting using linear system method"""
     best_plane = None
+    best_cost = float('inf')
     best_inliers = []
-    best_cost = float('inf')  # MLESAC minimizes cost
 
     num_points = points.shape[0]
 
-    for iteration in range(max_iterations):
-        # Sample 3 points
+    if gamma is None:
+        gamma = threshold ** 2
+
+    for _ in range(max_iterations):
         indices = np.random.choice(num_points, 3, replace=False)
-        sample = points[indices]
+        p0, p1, p2 = points[indices[0]], points[indices[1]], points[indices[2]]
 
-        vec1 = sample[1] - sample[0]
-        vec2 = sample[2] - sample[0]
-        normal = np.cross(vec1, vec2)
+        normal, d = fit_plane(p0, p1, p2)
 
-        if np.linalg.norm(normal) == 0:
+        if normal is None:
             continue
 
-        # Normalize the normal vector
-        normal = normal / np.linalg.norm(normal)
-        d = np.dot(normal, sample[0])
+        distances = np.abs((np.dot(points, normal)) - d)
 
-        # Calculate distances for all points
-        distances = np.abs((points @ normal) - d)
+        costs = np.where(distances < threshold,
+                         distances ** 2,
+                         gamma)
 
-        # MLESAC cost calculation
-        # If distance < threshold: cost = distance
-        # If distance >= threshold: cost = gamma
-        costs = np.where(distances < threshold, distances, gamma)
         total_cost = np.sum(costs)
-
-        # Find inliers
-        inliers = np.where(distances < threshold)[0]
 
         if total_cost < best_cost:
             best_cost = total_cost
-            best_inliers = inliers
             best_plane = (normal, d)
+            best_inliers = np.where(distances < threshold)[0]
 
     return best_plane, best_inliers
 

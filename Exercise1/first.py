@@ -69,7 +69,7 @@ def ransac_plane_fit(points, threshold=0.02, max_iterations=1000):
 
         d = np.dot(normal, sample[0])
         # computes dot products for all points at once.
-        distances = np.abs((points @ normal) - d)
+        distances = np.abs((np.dot(points, normal)) - d)
         inliers = np.where(distances < threshold)[0]
 
         if len(inliers) > len(best_inliers):
