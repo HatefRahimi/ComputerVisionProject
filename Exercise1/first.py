@@ -78,7 +78,10 @@ plt.show()
 
 # For floor detection
 floor_plane, floor_inliers_idx = ransac_plane_fit(
-    valid_points, threshold=1, max_iterations=1000)
+    valid_points, threshold=0.02, max_iterations=1000)
+
+if len(floor_inliers_idx) == 0:
+    print("No floor detected.")
 
 # Create a binary mask for the floor points
 floor_mask = np.zeros(valid_points.shape[0], dtype=np.uint8)
@@ -131,10 +134,8 @@ plt.show()
 normal_floor, d_floor = floor_plane
 normal_box, d_box = box_plane
 
-normal = (normal_floor + normal_box) / 2
-normal = normal / np.linalg.norm(normal)
+height = np.abs(d_box - d_floor)
 
-height = np.abs(d_box - d_floor) / np.linalg.norm(normal)
 print(f"Box height: {height:.4f} meters")
 
 box_top_points = point_cloud[box_top_mask == 1]
