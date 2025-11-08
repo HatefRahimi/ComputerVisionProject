@@ -33,6 +33,11 @@ plt.title("3D Scatter of Point Cloud PC")
 plt.show()
 
 
+def point_to_plane_distance(points, normal, d):
+
+    return np.abs(np.dot(points, normal) - d)
+
+
 def fit_plane(p0, p1, p2):
 
     vec1 = p1 - p0
@@ -69,7 +74,7 @@ def ransac_plane_fit(points, threshold=0.02, max_iterations=1000):
 
         d = np.dot(normal, sample[0])
         # computes dot products for all points at once.
-        distances = np.abs((np.dot(points, normal)) - d)
+        distances = point_to_plane_distance(points, normal, d)
         inliers = np.where(distances < threshold)[0]
 
         if len(inliers) > len(best_inliers):
