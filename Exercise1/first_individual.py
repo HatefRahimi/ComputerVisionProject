@@ -55,7 +55,6 @@ def preemptive_ransac(points, M=1000, B=500, threshold=0.02):
     """
     num_points = points.shape[0]
 
-    # Generate M initial hypotheses
     hypotheses = []
     for _ in range(M):
         indices = np.random.choice(num_points, 3, replace=False)
@@ -111,15 +110,15 @@ valid_mask = depth_image > 0
 valid_points = point_cloud[valid_mask]
 
 # Step 1: Detect floor with MLESAC
-print("Step 1: Detecting floor with MLESAC...")
-floor_plane, floor_inliers_idx = mlesac_plane_fit(
+print("Detecting floor with MLESAC...")
+floor_plane, best_inliers = mlesac_plane_fit(
     valid_points, threshold=0.02, max_iterations=1000)
 
-print(f"Floor inliers found: {len(floor_inliers_idx)}")
+print(f"Floor inliers found: {len(best_inliers)}")
 
 # Visualize floor mask
 floor_mask = np.zeros(valid_points.shape[0], dtype=np.uint8)
-floor_mask[floor_inliers_idx] = 1
+floor_mask[best_inliers] = 1
 
 floor_image_mask = np.zeros(valid_mask.shape, dtype=np.uint8)
 floor_image_mask[valid_mask] = floor_mask
@@ -134,18 +133,19 @@ plt.title("Floor Mask (MLESAC)")
 plt.axis('off')
 plt.show()
 
-# Step 2: Detect box top with Preemptive RANSAC
+# Detect box top with Preemptive RANSAC
 print("\nStep 2: Detecting box top with Preemptive RANSAC...")
 
 # Extract non-floor points
-non_floor_mask = valid_mask & (~floor_clean)
+floor_bool = floor_clean.astype(bool)
+non_floor_mask = valid_mask & (~floor_bool)
 non_floor_points = point_cloud[non_floor_mask]
 
 print(f"Non-floor points: {len(non_floor_points)}")
 
-# Apply Preemptive RANSAC
+# Preemptive RANSAC
 box_plane, box_inliers_idx = preemptive_ransac(
-    non_floor_points, M=2000, B=500, threshold=0.01)
+    non_floor_points, M=10, B=10, threshold=0.01)
 
 print(f"Box top inliers found: {len(box_inliers_idx)}")
 
@@ -168,7 +168,7 @@ plt.title("Box Top Mask (Preemptive RANSAC)")
 plt.axis('off')
 plt.show()
 
-# Step 3: Calculate box dimensions
+# Calculate box dimensions
 print("\nStep 3: Calculating box dimensions...")
 
 normal_floor, d_floor = floor_plane
