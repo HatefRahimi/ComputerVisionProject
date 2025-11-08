@@ -7,11 +7,11 @@ from scipy.ndimage import binary_opening, binary_closing
 
 np.random.seed(42)
 
-data = loadmat("data/example1kinect.mat")
-point_cloud = data['cloud1']
+data = loadmat("data/example3kinect.mat")
+point_cloud = data['cloud3']
 
 
-amplitude_image = data['amplitudes1']
+amplitude_image = data['amplitudes3']
 plt.figure()
 plt.imshow(amplitude_image, cmap='gray')
 plt.title("Amplitude Image (A)")
@@ -33,6 +33,21 @@ plt.title("3D Scatter of Point Cloud PC")
 plt.show()
 
 
+def fit_plane(p0, p1, p2):
+
+    vec1 = p1 - p0
+    vec2 = p2 - p0
+    normal = np.cross(vec1, vec2)
+
+    if np.linalg.norm(normal) == 0:
+        return None, None
+
+    normal = normal / np.linalg.norm(normal)
+    d = np.dot(normal, p0)
+
+    return normal, d
+
+
 def ransac_plane_fit(points, threshold=0.02, max_iterations=1000):
     best_plane = None
     best_inliers = []
@@ -46,10 +61,9 @@ def ransac_plane_fit(points, threshold=0.02, max_iterations=1000):
         # It is a sample plane
         sample = points[indices]
 
-        vec1 = sample[1] - sample[0]
-        vec2 = sample[2] - sample[0]
-        normal = np.cross(vec1, vec2)
-        if np.linalg.norm(normal) == 0:
+        normal, d = fit_plane(sample[0], sample[1], sample[2])
+
+        if normal is None:
             continue
         normal = normal / np.linalg.norm(normal)
 
