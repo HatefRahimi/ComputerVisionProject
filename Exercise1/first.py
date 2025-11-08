@@ -33,7 +33,7 @@ plt.title("3D Scatter of Point Cloud PC")
 plt.show()
 
 
-def ransac_plane_fit(points, threshold=1, max_iterations=1000):
+def ransac_plane_fit(points, threshold=0.02, max_iterations=1000):
     best_plane = None
     best_inliers = []
 
