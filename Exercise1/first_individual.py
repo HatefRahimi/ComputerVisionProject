@@ -109,7 +109,7 @@ depth_image = point_cloud[:, :, 2]
 valid_mask = depth_image > 0
 valid_points = point_cloud[valid_mask]
 
-# Step 1: Detect floor with MLESAC
+# Detect floor with MLESAC
 print("Detecting floor with MLESAC...")
 floor_plane, best_inliers = mlesac_plane_fit(
     valid_points, threshold=0.02, max_iterations=1000)
@@ -134,7 +134,7 @@ plt.axis('off')
 plt.show()
 
 # Detect box top with Preemptive RANSAC
-print("\nStep 2: Detecting box top with Preemptive RANSAC...")
+print("\nDetecting box top with Preemptive RANSAC...")
 
 # Extract non-floor points
 floor_bool = floor_clean.astype(bool)
