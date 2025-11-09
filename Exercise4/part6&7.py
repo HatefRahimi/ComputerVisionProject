@@ -60,41 +60,71 @@ def demosaic(mosaic):
     return np.stack([B_i, G_i, R_i], axis=2)
 
 
-def initial_hdr(cr3_folder, output_path):
-    # 1) List RAW files and exposure times (each half the previous)
+def simple_combination_hdr(cr3_folder):
+    """
+    Simple HDR combination using the replacement approach from the image:
+    1. Load brightest image (longest exposure) as base h
+    2. For each shorter exposure i:
+       - Scale by exposure ratio
+       - Replace saturated pixels in h with values from scaled i
+    """
+    # List RAW files and exposure times (each half the previous)
     raws = sorted(fn for fn in os.listdir(cr3_folder) if fn.lower().endswith('.cr3'))
     n = len(raws)
-    times = np.array([1 / (2 ** i) for i in range(n)], dtype=np.float32)
+    times = np.array([1.0 / (2 ** i) for i in range(n)], dtype=np.float32)
 
-    # 2) Accumulate H = Σ(raw_i / t_i), D = Σ(1 / t_i)
-    H_acc = None
-    D_acc = None
-    for fn, t in zip(raws, times):
-        path = os.path.join(cr3_folder, fn)
+    print(f"Found {n} RAW files")
+    print(f"Exposure times: {times}")
+
+    # Step 1: Load brightest image (longest exposure) as base h
+    print(f"Loading base image: {raws[0]} (exposure time: {times[0]})")
+    path = os.path.join(cr3_folder, raws[0])
+    with rawpy.imread(path) as rp:
+        h = rp.raw_image_visible.astype(np.float32)
+        black_level = np.mean(rp.black_level_per_channel)
+        white_level = rp.white_level
+        h = (h - black_level) / (white_level - black_level)
+        h = np.clip(h, 0, 1) * 65535
+
+    # Step 2: Process each shorter exposure
+    for i in range(1, n):
+        print(f"Processing {raws[i]} (exposure time: {times[i]})")
+        path = os.path.join(cr3_folder, raws[i])
         with rawpy.imread(path) as rp:
-            raw = rp.raw_image_visible.astype(np.float32)
-            # Get black level and saturation values
+            raw_i = rp.raw_image_visible.astype(np.float32)
             black_level = np.mean(rp.black_level_per_channel)
             white_level = rp.white_level
+            raw_i = (raw_i - black_level) / (white_level - black_level)
+            raw_i = np.clip(raw_i, 0, 1) * 65535
 
-            # Subtract black level and normalize
-            raw = (raw - black_level) / (white_level - black_level)
-            raw = np.clip(raw, 0, 1) * 65535  # Scale to 16-bit range
-        if H_acc is None:
-            H_acc = raw / t
-            D_acc = np.full_like(raw, 1.0 / t)
-        else:
-            H_acc += raw / t
-            D_acc += 1.0 / t
+        # Multiply i by the exposure difference to the first photo
+        exposure_ratio = times[0] / times[i]
+        scaled_i = raw_i * exposure_ratio
 
-    # 3) Radiance mosaic
-    radiance = H_acc / D_acc
+        # Using threshold of 0.8 * max(h) as suggested
+        threshold = 0.8 * np.max(h)
+        saturated_mask = h > threshold
 
-    # 4) Demosaic to linear RGB
+        num_saturated = np.sum(saturated_mask)
+        print(f"  Found {num_saturated} saturated pixels (threshold: {threshold:.1f})")
+        print(f"  Replacing with scaled values from exposure {i + 1}")
+
+        h[saturated_mask] = scaled_i[saturated_mask]
+
+    return h
+
+
+def initial_hdr_simple(cr3_folder, output_path):
+    """
+    HDR processing using simple replacement approach.
+    """
+    # Get HDR radiance mosaic using simple combination
+    radiance = simple_combination_hdr(cr3_folder)
+
+    # Demosaic to linear RGB
     rgb_lin = demosaic(radiance)
 
-    # 5) Simple white balance using camera multipliers or gray world
-    # First, try to normalize based on the data range
+    # Simple white balance
     for c in range(3):
         channel = rgb_lin[:, :, c]
         p1 = np.percentile(channel, 1)
@@ -103,42 +133,35 @@ def initial_hdr(cr3_folder, output_path):
 
     rgb_lin = np.clip(rgb_lin, 0, 1)
 
-    # 6) Apply log scale tone mapping
-    # Scale up before log to get better dynamic range
+    # Apply log scale tone mapping
     scale_factor = 100.0
     rgb_scaled = rgb_lin * scale_factor
-
-    # Apply log transformation
     rgb_log = np.log1p(rgb_scaled)
-
-    # Normalize to [0, 1]
     rgb_normalized = rgb_log / np.max(rgb_log)
 
     # Apply gamma correction for display
     gamma = 1.0 / 2.2
     rgb_display = np.power(rgb_normalized, gamma)
-
-    # Scale to [0, 255]
     rgb_final = rgb_display * 255.0
 
-    # 7) Clip and convert to uint8
+    # Clip and convert to uint8
     rgb_final = np.clip(rgb_final, 0, 255)
     out8 = rgb_final.astype(np.uint8)
 
-    # 8) Save the image
+    # Save the image
     imageio.imwrite(output_path, out8, quality=98)
 
-    # 9) Display the result
+    # Display the result
     HDR_img = Image.open(output_path)
     plt.figure(figsize=(12, 8))
     plt.imshow(HDR_img)
-    plt.title('HDR Initial Implementation (Log-Scale Tone Mapping)')
+    plt.title('HDR Simple Replacement Approach (Log-Scale Tone Mapping)')
     plt.axis('off')
     plt.tight_layout()
     plt.show()
 
 
-initial_hdr(FOLDER6, OUTPUT_JPG)
+initial_hdr_simple(FOLDER6, OUTPUT_JPG)
 
 #############  Part 6 ##############
 
