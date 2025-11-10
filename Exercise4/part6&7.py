@@ -61,22 +61,17 @@ def demosaic(mosaic):
 
 
 def simple_combination_hdr(cr3_folder):
-    """
-    Simple HDR combination using the replacement approach from the image:
-    1. Load brightest image (longest exposure) as base h
-    2. For each shorter exposure i:
-       - Scale by exposure ratio
-       - Replace saturated pixels in h with values from scaled i
-    """
+
     # List RAW files and exposure times (each half the previous)
-    raws = sorted(fn for fn in os.listdir(cr3_folder) if fn.lower().endswith('.cr3'))
+    raws = sorted(fn for fn in os.listdir(cr3_folder)
+                  if fn.lower().endswith('.cr3'))
     n = len(raws)
     times = np.array([1.0 / (2 ** i) for i in range(n)], dtype=np.float32)
 
     print(f"Found {n} RAW files")
     print(f"Exposure times: {times}")
 
-    # Step 1: Load brightest image (longest exposure) as base h
+    # Load brightest image (longest exposure) as base h
     print(f"Loading base image: {raws[0]} (exposure time: {times[0]})")
     path = os.path.join(cr3_folder, raws[0])
     with rawpy.imread(path) as rp:
@@ -86,7 +81,7 @@ def simple_combination_hdr(cr3_folder):
         h = (h - black_level) / (white_level - black_level)
         h = np.clip(h, 0, 1) * 65535
 
-    # Step 2: Process each shorter exposure
+    # Process each shorter exposure
     for i in range(1, n):
         print(f"Processing {raws[i]} (exposure time: {times[i]})")
         path = os.path.join(cr3_folder, raws[i])
@@ -106,7 +101,8 @@ def simple_combination_hdr(cr3_folder):
         saturated_mask = h > threshold
 
         num_saturated = np.sum(saturated_mask)
-        print(f"  Found {num_saturated} saturated pixels (threshold: {threshold:.1f})")
+        print(
+            f"  Found {num_saturated} saturated pixels (threshold: {threshold:.1f})")
         print(f"  Replacing with scaled values from exposure {i + 1}")
 
         h[saturated_mask] = scaled_i[saturated_mask]
@@ -248,7 +244,8 @@ def icam06_tone_mapping(rgb_hdr, output_range=4.0):
     rgb_hdr = np.maximum(rgb_hdr, eps)
 
     # 1. Calculate input intensity (1/61 * (20*red + 40*green + blue))
-    input_intensity = (20 * rgb_hdr[:, :, 0] + 40 * rgb_hdr[:, :, 1] + rgb_hdr[:, :, 2]) / 61.0
+    input_intensity = (
+        20 * rgb_hdr[:, :, 0] + 40 * rgb_hdr[:, :, 1] + rgb_hdr[:, :, 2]) / 61.0
     input_intensity = np.maximum(input_intensity, eps)
 
     # 2. Calculate r, g, b ratios
@@ -290,7 +287,8 @@ def icam06_hdr(cr3_folder, output_path):
     Process HDR using iCAM06 method.
     """
     # 1) List RAW files and exposure times
-    raws = sorted(fn for fn in os.listdir(cr3_folder) if fn.lower().endswith('.cr3'))
+    raws = sorted(fn for fn in os.listdir(cr3_folder)
+                  if fn.lower().endswith('.cr3'))
     n = len(raws)
     times = np.array([1.0 / (2 ** i) for i in range(n)], dtype=np.float32)
 
@@ -388,7 +386,8 @@ def icam06_hdr(cr3_folder, output_path):
     plt.show()
 
     # Show comparison with initial
-    initial_path = os.path.join(os.path.dirname(cr3_folder), '06', 'HDR_initial.jpg')
+    initial_path = os.path.join(os.path.dirname(
+        cr3_folder), '06', 'HDR_initial.jpg')
     if os.path.exists(initial_path):
         plt.figure(figsize=(16, 8))
 
