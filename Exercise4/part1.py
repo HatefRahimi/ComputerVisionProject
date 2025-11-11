@@ -46,7 +46,7 @@ pattern_map[blue_offset] = 'B'
 
 pattern_name = (pattern_map[(0, 0)] + pattern_map[(0, 1)] +
                 pattern_map[(1, 0)] + pattern_map[(1, 1)])
-print(f'\nBayer pattern (GRBG format): {pattern_name}')
+print(f'Raw Bayer Mosaic – IMG_9939 ({pattern_name} pattern)')
 
 # 4. Visualize the raw mosaic
 plt.figure(figsize=(8, 6))
