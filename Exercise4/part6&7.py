@@ -80,6 +80,7 @@ def simple_combination_hdr(cr3_folder):
         white_level = rp.white_level
         h = (h - black_level) / (white_level - black_level)
         h = np.clip(h, 0, 1) * 65535
+        # Normalization not needed as implemented here.
 
     # Process each shorter exposure
     for i in range(1, n):
@@ -107,6 +108,7 @@ def simple_combination_hdr(cr3_folder):
 
         h[saturated_mask] = scaled_i[saturated_mask]
 
+    # Show the data
     return h
 
 
@@ -174,45 +176,6 @@ KERNEL = np.array([
     [0.5, 1.0, 0.5],
     [0.25, 0.5, 0.25]
 ], dtype=np.float32)
-
-
-def demosaic(mosaic):
-    """
-    Bilinear demosaic of a raw Bayer mosaic (BGGR pattern).
-    """
-    H, W = mosaic.shape
-
-    # BGGR pattern
-    b_mask = np.zeros((H, W), bool)
-    b_mask[0::2, 0::2] = True
-
-    g_mask = np.zeros((H, W), bool)
-    g_mask[0::2, 1::2] = True
-    g_mask[1::2, 0::2] = True
-
-    r_mask = np.zeros((H, W), bool)
-    r_mask[1::2, 1::2] = True
-
-    # Extract known samples
-    R = np.zeros_like(mosaic)
-    R[r_mask] = mosaic[r_mask]
-    G = np.zeros_like(mosaic)
-    G[g_mask] = mosaic[g_mask]
-    B = np.zeros_like(mosaic)
-    B[b_mask] = mosaic[b_mask]
-
-    # Convolution-based interpolation
-    def interp(channel, mask):
-        num = convolve(channel, KERNEL, mode='mirror')
-        denom = convolve(mask.astype(np.float32), KERNEL, mode='mirror')
-        return num / np.maximum(denom, 1e-6)
-
-    R_i = interp(R, r_mask)
-    G_i = interp(G, g_mask)
-    B_i = interp(B, b_mask)
-
-    # Return with channels swapped: BGR -> RGB
-    return np.stack([B_i, G_i, R_i], axis=2)
 
 
 def bilateral_filter(image, spatial_sigma=2.0, range_sigma=0.1, kernel_size=None):
