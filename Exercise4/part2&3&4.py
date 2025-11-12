@@ -40,9 +40,6 @@ blue_interpolated = interpolate_missing_values(blue_channel, blue_mask)
 rgb_linear_image = np.stack(
     [red_interpolated, green_interpolated, blue_interpolated], axis=2)
 
-print("✓ Part 2 complete: Demosaicing done")
-
-
 #############  PART 3: GAMMA CORRECTION ##############
 
 # Apply gamma correction
