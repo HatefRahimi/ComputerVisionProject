@@ -33,47 +33,50 @@ def combination_hdr(raw_folder):
     )
 
     num_images = len(raw_file_list)
-    exposure_times = np.array(
-        [1.0 / (2 ** i) for i in range(num_images)],
-        dtype=np.float32
-    )
 
+    # Hard-coded exposure sequence (brightest → darkest)
+    exposure_times_hdr = [1, 1/2, 1/4, 1/8, 1/16,
+                          1/32, 1/64, 1/128, 1/256, 1/512, 1/1024]
+
+    # Slice to match available number of files
     print(f"Found {num_images} RAW files")
-    print("Exposure times:", exposure_times)
+    print("Exposure times:", exposure_times_hdr)
 
     # Load brightest image
     base_path = os.path.join(raw_folder, raw_file_list[0])
-    base_time = exposure_times[0]
+    base_time = exposure_times_hdr[0]
 
     print(f"\nLoading base image: {raw_file_list[0]} (t = {base_time})")
 
     with rawpy.imread(base_path) as raw_reader:
         hdr_mosaic = raw_reader.raw_image_visible.astype(np.float32)
+
         black = np.mean(raw_reader.black_level_per_channel)
         white = raw_reader.white_level
+
         hdr_mosaic = (hdr_mosaic - black) / (white - black)
         hdr_mosaic = np.clip(hdr_mosaic, 0, 1) * 65535
 
     # Replace saturated pixels with shorter exposures
     for i in range(1, num_images):
         filename = raw_file_list[i]
-        exposure = exposure_times[i]
+        exposure = exposure_times_hdr[i]
 
         print(f"\nProcessing {filename} (t = {exposure})")
 
         path = os.path.join(raw_folder, filename)
         with rawpy.imread(path) as raw_reader:
             raw_img = raw_reader.raw_image_visible.astype(np.float32)
+
             black = np.mean(raw_reader.black_level_per_channel)
             white = raw_reader.white_level
+
             raw_img = (raw_img - black) / (white - black)
             raw_img = np.clip(raw_img, 0, 1) * 65535
 
-        # Exposure ratio to base image
         exposure_ratio = base_time / exposure
         scaled_img = raw_img * exposure_ratio
 
-        # Saturation threshold
         threshold = 0.8 * np.max(hdr_mosaic)
         saturated_mask = hdr_mosaic > threshold
 
@@ -81,6 +84,15 @@ def combination_hdr(raw_folder):
         print(f"  Replacing saturated values using {filename}")
 
         hdr_mosaic[saturated_mask] = scaled_img[saturated_mask]
+
+    # Visualization
+    plt.figure(figsize=(10, 8))
+    plt.imshow(hdr_mosaic, cmap='gray',
+               vmin=0, vmax=np.percentile(hdr_mosaic, 99))
+    plt.title('HDR Mosaic (Grayscale)')
+    plt.axis('off')
+    plt.tight_layout()
+    plt.show()
 
     return hdr_mosaic
 

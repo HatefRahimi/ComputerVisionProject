@@ -160,7 +160,7 @@ def demosaic(raw_data, pattern=None):
     green_interpolated = interpolate_missing_values(green_channel, green_mask)
     blue_interpolated = interpolate_missing_values(blue_channel, blue_mask)
 
-    return np.stack([red_interpolated, green_interpolated, blue_interpolated], axis=2)
+    return np.stack([blue_interpolated, green_interpolated, red_interpolated], axis=2)
 
 
 def improve_luminosity(rgb_image, p_low=0.01, p_high=99.99, gamma=0.3):
