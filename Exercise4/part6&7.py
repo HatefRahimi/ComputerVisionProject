@@ -25,7 +25,6 @@ simple_hdr_output_path = os.path.join(results, 'HDR_initial.jpg')
 def combination_hdr(raw_folder):
     """
     Combine differently exposed RAW images into one HDR Bayer mosaic
-    using the 'simple replacement' HDR method from the lecture.
     """
 
     raw_file_list = sorted(
