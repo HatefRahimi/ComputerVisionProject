@@ -5,8 +5,11 @@ import imageio
 from scipy.ndimage import gaussian_filter
 import time
 
+results_dir = "results"
+os.makedirs(results_dir, exist_ok=True)
 
-def process_raw(raw_path, output_path, quality=99):
+
+def process_raw(raw_path, output_filename="output_custom.jpg", quality=99):
     start_time = time.time()
     print(f"Processing {os.path.basename(raw_path)}...")
 
@@ -86,6 +89,9 @@ def process_raw(raw_path, output_path, quality=99):
 
     # Step 8: Convert to 8-bit and save
     rgb_8bit = (rgb * 255).astype(np.uint8)
+
+    # --- Save into results/ folder ---
+    output_path = os.path.join(results_dir, output_filename)
     imageio.imwrite(output_path, rgb_8bit, quality=quality)
 
     elapsed_time = time.time() - start_time

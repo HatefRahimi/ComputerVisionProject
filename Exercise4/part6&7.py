@@ -159,9 +159,9 @@ def icam06_tone_mapping(rgb_hdr, output_dynamic_range=4.0):
     intensity = np.maximum(intensity, eps)
 
     # 2. Chromaticity ratios
-    r_ratio = rgb_hdr[:, :, 0] / intensity
-    g_ratio = rgb_hdr[:, :, 1] / intensity
-    b_ratio = rgb_hdr[:, :, 2] / intensity
+    red_ratio = rgb_hdr[:, :, 0] / intensity
+    green_ratio = rgb_hdr[:, :, 1] / intensity
+    blue_ratio = rgb_hdr[:, :, 2] / intensity
 
     # 3. Log base layer
     log_intensity = np.log(intensity)
@@ -171,10 +171,10 @@ def icam06_tone_mapping(rgb_hdr, output_dynamic_range=4.0):
     log_detail = log_intensity - log_base
 
     # 5. Compression
-    bmin = np.min(log_base)
-    bmax = np.max(log_base)
-    compression = np.log(output_dynamic_range) / (bmax - bmin)
-    log_offset = -bmax * compression
+    log_base_min = np.min(log_base)
+    log_base_max = np.max(log_base)
+    compression = np.log(output_dynamic_range) / (log_base_max - log_base_min)
+    log_offset = -log_base_max * compression
 
     # 6. Output intensity
     log_output = log_base * compression + log_offset + log_detail
@@ -182,9 +182,9 @@ def icam06_tone_mapping(rgb_hdr, output_dynamic_range=4.0):
 
     # 7. Reconstruct RGB
     rgb_out = np.zeros_like(rgb_hdr)
-    rgb_out[:, :, 0] = r_ratio * intensity_out
-    rgb_out[:, :, 1] = g_ratio * intensity_out
-    rgb_out[:, :, 2] = b_ratio * intensity_out
+    rgb_out[:, :, 0] = red_ratio * intensity_out
+    rgb_out[:, :, 1] = green_ratio * intensity_out
+    rgb_out[:, :, 2] = blue_ratio * intensity_out
 
     return rgb_out
 
@@ -248,11 +248,12 @@ def icam06_hdr(raw_folder, output_path):
 
     # Normalize per channel
     rgb_norm = np.zeros_like(rgb_tm)
-    for c in range(3):
-        ch = rgb_tm[:, :, c]
-        lo = np.percentile(ch, 0.5)
-        hi = np.percentile(ch, 99.5)
-        rgb_norm[:, :, c] = np.clip((ch - lo) / (hi - lo), 0, 1)
+    for channel_index in range(3):
+        channel_data = rgb_tm[:, :, channel_index]
+        low_percentile = np.percentile(channel_data, 0.5)
+        high_percentile = np.percentile(channel_data, 99.5)
+        rgb_norm[:, :, channel_index] = np.clip(
+            (channel_data - low_percentile) / (high_percentile - low_percentile), 0, 1)
 
     # Gamma + 8-bit
     gamma = 1 / 2.2

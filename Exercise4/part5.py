@@ -5,12 +5,12 @@ import rawpy
 from methods import detect_bayer_pattern, create_bayer_masks
 
 # Define file paths and exposure times
-folder = 'exercise_4_data/05'  # Changed from 'path' to 'folder'
+data_root = 'exercise_4_data/05'
 image_numbers = range(3044, 3050)
 exposure_times = np.array([1/10, 1/20, 1/40, 1/80, 1/160, 1/320], dtype=float)
 
 # Load one image to detect pattern and get dimensions
-with rawpy.imread(f'{folder}/IMG_3044.CR3') as rawp:
+with rawpy.imread(f'{data_root}/IMG_3044.CR3') as rawp:
     raw_sensor = rawp.raw_image_visible.astype(np.float32)
 
 height, width = raw_sensor.shape
@@ -25,7 +25,7 @@ means_green = []
 means_blue = []
 
 for num in image_numbers:
-    filepath = f'{folder}/IMG_{num}.CR3'  # Changed 'path' to 'filepath'
+    filepath = f'{data_root}/IMG_{num}.CR3'  # Changed 'path' to 'filepath'
     with rawpy.imread(filepath) as rawp:
         raw = rawp.raw_image_visible.astype(np.float32)
     means_red.append(raw[red_mask].mean())
