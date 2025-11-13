@@ -6,7 +6,8 @@ from methods import (
     create_bayer_masks,
     interpolate_missing_values,
     improve_luminosity,
-    gray_world_white_balance
+    gray_world_white_balance,
+    demosaic
 )
 
 #############  PART 2: DEMOSAICING ##############
@@ -22,23 +23,7 @@ print(f'Loaded raw image: {height} x {width}\n')
 pattern = detect_bayer_pattern(raw_sensor, verbose=True)
 red_mask, green_mask, blue_mask = create_bayer_masks((height, width), pattern)
 
-# Extract channels
-red_channel = np.zeros_like(raw_sensor)
-red_channel[red_mask] = raw_sensor[red_mask]
-
-green_channel = np.zeros_like(raw_sensor)
-green_channel[green_mask] = raw_sensor[green_mask]
-
-blue_channel = np.zeros_like(raw_sensor)
-blue_channel[blue_mask] = raw_sensor[blue_mask]
-
-# Interpolate missing values
-red_interpolated = interpolate_missing_values(red_channel, red_mask)
-green_interpolated = interpolate_missing_values(green_channel, green_mask)
-blue_interpolated = interpolate_missing_values(blue_channel, blue_mask)
-
-rgb_linear_image = np.stack(
-    [red_interpolated, green_interpolated, blue_interpolated], axis=2)
+rgb_linear_image = demosaic(raw_sensor, pattern)
 
 #############  PART 3: GAMMA CORRECTION ##############
 
