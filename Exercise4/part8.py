@@ -84,7 +84,7 @@ def process_raw(raw_path, output_filename="output_custom.jpg", quality=99):
     rgb = rgb * rgb * (3 - 2 * rgb)
 
     # Apply gamma for display
-    gamma = 1.0 / 2.2
+    gamma = 0.4
     rgb = np.power(rgb, gamma)
 
     # Step 8: Convert to 8-bit and save

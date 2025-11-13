@@ -60,9 +60,9 @@ def combination_hdr(raw_folder):
     # Replace saturated pixels with shorter exposures
     for i in range(1, num_images):
         filename = raw_file_list[i]
-        exposure = exposure_times_hdr[i]
+        current_exposure = exposure_times_hdr[i]
 
-        print(f"\nProcessing {filename} (t = {exposure})")
+        print(f"\nProcessing {filename} (t = {current_exposure})")
 
         path = os.path.join(raw_folder, filename)
         with rawpy.imread(path) as raw_reader:
@@ -74,7 +74,7 @@ def combination_hdr(raw_folder):
             raw_img = (raw_img - black) / (white - black)
             raw_img = np.clip(raw_img, 0, 1) * 65535
 
-        exposure_ratio = base_time / exposure
+        exposure_ratio = base_time / current_exposure
         scaled_img = raw_img * exposure_ratio
 
         threshold = 0.8 * np.max(hdr_mosaic)
@@ -99,7 +99,7 @@ def combination_hdr(raw_folder):
 
 def initial_hdr_simple(raw_folder, output_path):
     """
-    Full simple HDR pipeline + log tone mapping + gamma + 8-bit output.
+    Full HDR pipeline + log tone mapping + gamma + 8-bit output.
     """
 
     # 1) HDR combine
@@ -114,14 +114,14 @@ def initial_hdr_simple(raw_folder, output_path):
     rgb_hdr = np.clip(rgb_hdr, 0, 1)
     rgb_hdr = gray_world_white_balance(rgb_hdr)
 
-    # 4) Log tone mapping (per lecture)
+    # 4) Log tone mapping
     scale = 100.0
     rgb_scaled = rgb_hdr * scale
     rgb_log = np.log1p(rgb_scaled)
     rgb_log_norm = rgb_log / np.max(rgb_log)
 
     # 5) Gamma + 8-bit
-    gamma = 1 / 2.2
+    gamma = 0.4
     rgb_gamma = np.power(rgb_log_norm, gamma)
     rgb_8bit = np.clip(rgb_gamma * 255, 0, 255).astype(np.uint8)
 
@@ -130,7 +130,7 @@ def initial_hdr_simple(raw_folder, output_path):
 
     plt.figure(figsize=(12, 8))
     plt.imshow(rgb_8bit)
-    plt.title('HDR Simple Replacement Method')
+    plt.title('HDR Method')
     plt.axis('off')
     plt.tight_layout()
     plt.show()
@@ -145,7 +145,7 @@ icam_output_path = os.path.join(results, 'HDR_iCAM06.jpg')
 
 def bilateral_filter(image, spatial_sigma=2.0):
     """
-    Simplified bilateral filter using Gaussian smoothing (assignment hint).
+    bilateral filter using Gaussian smoothing (assignment hint).
     """
     filtered = image.copy()
     for _ in range(2):
@@ -161,7 +161,7 @@ def icam06_tone_mapping(rgb_hdr, output_dynamic_range=4.0):
     eps = 1e-10
     rgb_hdr = np.maximum(rgb_hdr, eps)
 
-    # 1. Intensity (luminance)
+    # 1. Compute Intensity
     intensity = (
         20 * rgb_hdr[:, :, 0] +
         40 * rgb_hdr[:, :, 1] +
@@ -211,8 +211,9 @@ def icam06_hdr(raw_folder, output_path):
     )
 
     num_images = len(raw_file_list)
-    exposure_times = np.array([1.0 / (2 ** i) for i in range(num_images)],
-                              dtype=np.float32)
+
+    exposure_times = [1, 1/2, 1/4, 1/8, 1/16,
+                      1/32, 1/64, 1/128, 1/256, 1/512, 1/1024]
 
     print(f"\nFound {num_images} RAW images for iCAM06 HDR")
     print("Exposure times:", exposure_times)
@@ -267,7 +268,7 @@ def icam06_hdr(raw_folder, output_path):
             (channel_data - low_percentile) / (high_percentile - low_percentile), 0, 1)
 
     # Gamma + 8-bit
-    gamma = 1 / 2.2
+    gamma = 0.4
     rgb_gamma = np.power(rgb_norm, gamma)
     rgb_8bit = (rgb_gamma * 255).astype(np.uint8)
 

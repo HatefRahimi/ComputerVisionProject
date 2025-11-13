@@ -32,7 +32,7 @@ for num in image_numbers:
     means_green.append(raw[green_mask].mean())
     means_blue.append(raw[blue_mask].mean())
 
-# Plot with LINEAR scale (not loglog!)
+# Plot with LINEAR scale
 plt.figure(figsize=(8, 6))
 plt.plot(exposure_times, means_red, '-o', color='r', label='Red')
 plt.plot(exposure_times, means_green, '-s', color='g', label='Green')
