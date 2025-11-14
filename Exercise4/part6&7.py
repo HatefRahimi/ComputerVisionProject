@@ -206,49 +206,11 @@ def icam06_hdr(raw_folder, output_path):
     """
     Full HDR merging + iCAM06 tone mapping.
     """
-
-    raw_file_list = sorted(
-        filename for filename in os.listdir(raw_folder)
-        if filename.lower().endswith('.cr3')
-    )
-
-    num_images = len(raw_file_list)
-
-    exposure_times = [1, 1/2, 1/4, 1/8, 1/16,
-                      1/32, 1/64, 1/128, 1/256, 1/512, 1/1024]
-
-    print(f"\nFound {num_images} RAW images for iCAM06 HDR")
-    print("Exposure times:", exposure_times)
-
-    hdr_sum = None
-    weight_sum = None
-
-    # HDR accumulation
-    for filename, t in zip(raw_file_list, exposure_times):
-        print(f"Processing {filename} (t = {t})")
-
-        full_path = os.path.join(raw_folder, filename)
-
-        with rawpy.imread(full_path) as raw_reader:
-            raw_img = raw_reader.raw_image_visible.astype(np.float32)
-            black = np.mean(raw_reader.black_level_per_channel)
-            white = raw_reader.white_level
-            raw_img = (raw_img - black) / (white - black)
-            raw_img = np.clip(raw_img, 0, 1) * 65535
-
-        if hdr_sum is None:
-            hdr_sum = raw_img / t
-            weight_sum = np.full_like(raw_img, 1.0 / t)
-        else:
-            hdr_sum += raw_img / t
-            weight_sum += 1.0 / t
-
-    # Radiance map
-    radiance = hdr_sum / weight_sum
+    hdr_mosaic = combination_hdr(raw_folder)
 
     # Demosaic
-    pattern = detect_bayer_pattern(radiance)
-    rgb_hdr = demosaic(radiance, pattern=pattern)
+    pattern = detect_bayer_pattern(hdr_mosaic)
+    rgb_hdr = demosaic(hdr_mosaic, pattern=pattern)
 
     # White balance + normalize
     rgb_hdr = rgb_hdr / np.percentile(rgb_hdr, 95)
