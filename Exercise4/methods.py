@@ -1,26 +1,36 @@
-"""
-Reusable functions for demosaicing and image processing
-"""
 import numpy as np
 from scipy.ndimage import convolve
+import numpy as np
+
+
+def detect_bayer_pattern_fixed(pattern_name, verbose=False):
+
+    # Defined INSIDE the method
+    Bayer_pattern = {
+        'RGGB': {'red': (0, 0), 'green1': (0, 1), 'green2': (1, 0), 'blue': (1, 1)},
+        'BGGR': {'red': (1, 1), 'green1': (0, 1), 'green2': (1, 0), 'blue': (0, 0)},
+        'GRBG': {'red': (0, 1), 'green1': (0, 0), 'green2': (1, 1), 'blue': (1, 0)},
+        'GBRG': {'red': (1, 0), 'green1': (0, 0), 'green2': (1, 1), 'blue': (0, 1)},
+    }
+
+    if pattern_name not in Bayer_pattern:
+        raise ValueError(f"Invalid Bayer pattern: {pattern_name}")
+
+    if verbose:
+        print(f"Using fixed Bayer pattern: {pattern_name}")
+
+    base = Bayer_pattern[pattern_name]
+
+    return {
+        'red': base['red'],
+        'green1': base['green1'],
+        'green2': base['green2'],
+        'blue': base['blue'],
+        'pattern_name': pattern_name
+    }
 
 
 def detect_bayer_pattern(raw_array, verbose=False):
-    """
-    Detect the Bayer pattern from raw sensor data by analyzing mean values.
-
-    Args:
-        raw_array: 2D numpy array of raw sensor values
-        verbose: if True, print detection details
-
-    Returns:
-        dict with keys:
-            - 'red': (row, col) offset tuple
-            - 'green1': (row, col) offset tuple  
-            - 'green2': (row, col) offset tuple
-            - 'blue': (row, col) offset tuple
-            - 'pattern_name': string like 'GRGB' or 'RGGB'
-    """
     # Compute mean value at each 2×2 Bayer offset
     means = {
         (dy, dx): raw_array[dy::2, dx::2].mean()
@@ -40,27 +50,51 @@ def detect_bayer_pattern(raw_array, verbose=False):
         for (dy, dx), m in sorted_means:
             print(f'  Offset ({dy},{dx}): {m:.2f}')
 
-    # Identify colors (green typically has highest values)
+    # Two highest: greens
     green1_offset = sorted_means[0][0]
     green2_offset = sorted_means[1][0]
-    red_offset = sorted_means[2][0]
-    blue_offset = sorted_means[3][0]
 
-    # Determine pattern name
+    # Remaining two are red and blue
+    remaining = [sorted_means[2][0], sorted_means[3][0]]
+
+    # Heuristic: assume common diagonal patterns
+    if (0, 0) in remaining and (1, 1) in remaining:
+        # Diagonal pattern: assume RGGB
+        red_offset = (0, 0)
+        blue_offset = (1, 1)
+    elif (0, 1) in remaining and (1, 0) in remaining:
+        # Diagonal pattern: assume GRBG
+        red_offset = (0, 1)
+        blue_offset = (1, 0)
+    else:
+        # Fallback: use brightness order (unreliable)
+        red_offset = sorted_means[2][0]
+        blue_offset = sorted_means[3][0]
+        if verbose:
+            print("\nUnusual Bayer pattern detected!")
+            print("Use the fixed method.")
+
+    # Build pattern string like 'RGGB'
     pattern_map = {
-        (0, 0): None, (0, 1): None,
-        (1, 0): None, (1, 1): None
+        (0, 0): None,
+        (0, 1): None,
+        (1, 0): None,
+        (1, 1): None
     }
+
     pattern_map[green1_offset] = 'G'
     pattern_map[green2_offset] = 'G'
     pattern_map[red_offset] = 'R'
     pattern_map[blue_offset] = 'B'
 
-    pattern_name = (pattern_map[(0, 0)] + pattern_map[(0, 1)] +
-                    pattern_map[(1, 0)] + pattern_map[(1, 1)])
+    pattern_name = (
+        pattern_map[(0, 0)] +
+        pattern_map[(0, 1)] +
+        pattern_map[(1, 0)] +
+        pattern_map[(1, 1)]
+    )
 
     if verbose:
-        print('\n--- Identified Bayer Pattern ---')
         print(f'Pattern: {pattern_name}')
         print(f'Red:     offset {red_offset}')
         print(f'Green 1: offset {green1_offset}')
@@ -72,7 +106,7 @@ def detect_bayer_pattern(raw_array, verbose=False):
         'green1': green1_offset,
         'green2': green2_offset,
         'blue': blue_offset,
-        'pattern_name': pattern_name
+        'pattern_name': pattern_name,
     }
 
 
@@ -160,10 +194,7 @@ def demosaic(raw_data, pattern=None):
     green_interpolated = interpolate_missing_values(green_channel, green_mask)
     blue_interpolated = interpolate_missing_values(blue_channel, blue_mask)
 
-    if pattern["pattern_name"] == "RGGB":
-        return np.stack([red_interpolated, green_interpolated, blue_interpolated], axis=2)
-    else:
-        return np.stack([blue_interpolated, green_interpolated, red_interpolated], axis=2)
+    return np.stack([red_interpolated, green_interpolated, blue_interpolated], axis=2)
 
 
 def improve_luminosity(rgb_image, p_low=0.01, p_high=99.99, gamma=0.3):

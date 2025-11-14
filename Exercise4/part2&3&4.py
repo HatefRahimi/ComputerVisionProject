@@ -7,7 +7,8 @@ from methods import (
     interpolate_missing_values,
     improve_luminosity,
     gray_world_white_balance,
-    demosaic
+    demosaic,
+    detect_bayer_pattern_fixed
 )
 
 #############  PART 2: DEMOSAICING ##############
@@ -20,7 +21,7 @@ height, width = raw_sensor.shape
 print(f'Loaded raw image: {height} x {width}\n')
 
 # Detect Bayer pattern
-pattern = detect_bayer_pattern(raw_sensor, verbose=True)
+pattern = detect_bayer_pattern_fixed(raw_sensor, verbose=True)
 red_mask, green_mask, blue_mask = create_bayer_masks((height, width), pattern)
 
 rgb_linear_image = demosaic(raw_sensor, pattern)

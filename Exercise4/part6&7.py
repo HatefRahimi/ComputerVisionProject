@@ -9,6 +9,7 @@ from methods import (
     detect_bayer_pattern,
     demosaic,
     gray_world_white_balance,
+    detect_bayer_pattern_fixed
 )
 
 results = 'results'
@@ -106,7 +107,8 @@ def initial_hdr_simple(raw_folder, output_path):
     hdr_mosaic = combination_hdr(raw_folder)
 
     # 2) Demosaic
-    pattern = detect_bayer_pattern(hdr_mosaic)
+    pattern = detect_bayer_pattern(
+        hdr_mosaic, verbose=True)
     rgb_hdr = demosaic(hdr_mosaic, pattern=pattern)
 
     # 3) Normalize + white balance
