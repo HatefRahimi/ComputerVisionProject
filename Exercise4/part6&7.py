@@ -206,7 +206,6 @@ def icam06_hdr(raw_folder, output_path):
     """
     Full HDR merging + iCAM06 tone mapping.
     """
-
     hdr_mosaic = combination_hdr(raw_folder)
 
     # Demosaic
