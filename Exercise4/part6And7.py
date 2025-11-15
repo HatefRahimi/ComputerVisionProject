@@ -87,13 +87,13 @@ def combination_hdr(raw_folder):
         hdr_mosaic[saturated_mask] = scaled_img[saturated_mask]
 
     # Visualization
-    plt.figure(figsize=(10, 8))
-    plt.imshow(hdr_mosaic, cmap='gray',
-               vmin=0, vmax=np.percentile(hdr_mosaic, 99))
-    plt.title('HDR Mosaic (Grayscale)')
-    plt.axis('off')
-    plt.tight_layout()
-    plt.show()
+    # plt.figure(figsize=(10, 8))
+    # plt.imshow(hdr_mosaic, cmap='gray',
+    #            vmin=0, vmax=np.percentile(hdr_mosaic, 99))
+    # plt.title('HDR Mosaic (Grayscale)')
+    # plt.axis('off')
+    # plt.tight_layout()
+    # plt.show()
 
     return hdr_mosaic
 
