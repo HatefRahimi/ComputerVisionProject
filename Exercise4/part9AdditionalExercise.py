@@ -203,6 +203,15 @@ def save_result(image, output_path, quality=98):
     print(f"Saved to: {output_path}")
 
 
+def tonemap_reinhard(hdr):
+    tonemap = cv2.createTonemapReinhard(
+        gamma=1.0, intensity=0, light_adapt=1.0, color_adapt=0)
+    ldr = tonemap.process(hdr.astype(np.float32))
+    ldr = np.clip(ldr, 0, 1)
+    ldr = (ldr * 255).astype(np.uint8)
+    return ldr
+
+
 def main():
     """Main HDR pipeline"""
 
@@ -230,7 +239,7 @@ def main():
     # Tone mapping
     print("\n Tone mapping...")
     ldr_result = gamma_correction(
-        hdr_image, p_low=0.01, p_high=99.99, gamma=0.35)
+        hdr_image, p_low=0.01, p_high=99.99, gamma=0.2)
 
     # Save results
     print("\n Saving results...")
