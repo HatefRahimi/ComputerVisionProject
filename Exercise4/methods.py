@@ -32,10 +32,10 @@ def detect_bayer_pattern_fixed(pattern_name, verbose=False):
 
 def detect_bayer_pattern(raw_array, verbose=False):
     # Compute mean value at each 2×2 Bayer offset
-    means = {
-        (dy, dx): raw_array[dy::2, dx::2].mean()
-        for dy in (0, 1) for dx in (0, 1)
-    }
+    means = {}
+    for dy in (0, 1):
+        for dx in (0, 1):
+            means[(dy, dx)] = raw_array[dy::2, dx::2].mean()
 
     if verbose:
         print('Mean values at offsets (dy,dx):')
@@ -57,13 +57,13 @@ def detect_bayer_pattern(raw_array, verbose=False):
     # Remaining two are red and blue
     remaining = [sorted_means[2][0], sorted_means[3][0]]
 
-    # Heuristic: assume common diagonal patterns
+    # Common diagonal patterns
     if (0, 0) in remaining and (1, 1) in remaining:
-        # Diagonal pattern: assume RGGB
+        # Diagonal pattern: RGGB
         red_offset = (0, 0)
         blue_offset = (1, 1)
     elif (0, 1) in remaining and (1, 0) in remaining:
-        # Diagonal pattern: assume GRBG
+        # Diagonal pattern: GRBG
         red_offset = (0, 1)
         blue_offset = (1, 0)
     else:
