@@ -71,7 +71,7 @@ def detect_bayer_pattern(raw_array, verbose=False):
         red_offset = sorted_means[2][0]
         blue_offset = sorted_means[3][0]
         if verbose:
-            print("\nUnusual Bayer pattern detected!")
+            print("\nUnusual Bayer pattern detected")
             print("Use the fixed method.")
 
     # Build pattern string like 'RGGB'
