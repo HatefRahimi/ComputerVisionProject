@@ -5,7 +5,7 @@ from methods import (
     detect_bayer_pattern,
     create_bayer_masks,
     interpolate_missing_values,
-    improve_luminosity,
+    gamma_correction,
     gray_world_white_balance,
     demosaic,
     detect_bayer_pattern_fixed
@@ -29,7 +29,7 @@ rgb_linear_image = demosaic(raw_sensor, pattern)
 #############  PART 3: GAMMA CORRECTION ##############
 
 # Apply gamma correction
-gamma_image = improve_luminosity(rgb_linear_image, gamma=0.3)
+gamma_image = gamma_correction(rgb_linear_image, gamma=0.3)
 
 # Alternative: log curve
 

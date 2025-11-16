@@ -230,7 +230,7 @@ def main():
     # Tone mapping
     print("\n Tone mapping...")
     ldr_result = gamma_correction(
-        hdr_image, p_low=0.01, p_high=99.99, gamma=0.2)
+        hdr_image, p_low=0.01, p_high=99.99, gamma=0.35)
 
     # Save results
     print("\n Saving results...")

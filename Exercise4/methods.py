@@ -197,7 +197,7 @@ def demosaic(raw_data, pattern=None):
     return np.stack([red_interpolated, green_interpolated, blue_interpolated], axis=2)
 
 
-def improve_luminosity(rgb_image, p_low=0.01, p_high=99.99, gamma=0.3):
+def gamma_correction(rgb_image, p_low=0.01, p_high=99.99, gamma=0.3):
     """
     Apply gamma correction with percentile-based normalization.
 
