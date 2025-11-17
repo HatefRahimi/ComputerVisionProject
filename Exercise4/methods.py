@@ -112,14 +112,7 @@ def detect_bayer_pattern(raw_array, verbose=False):
 
 def create_bayer_masks(shape, pattern):
     """
-    Create binary masks for each color channel based on Bayer pattern.
-
-    Args:
-        shape: (height, width) tuple
-        pattern: dict from detect_bayer_pattern()
-
-    Returns:
-        (red_mask, green_mask, blue_mask) tuple of boolean arrays
+    binary masks for each color channel based on Bayer pattern.
     """
     height, width = shape
 
@@ -143,15 +136,7 @@ def create_bayer_masks(shape, pattern):
 
 def interpolate_missing_values(channel, mask, kernel=None):
     """
-    Interpolate missing values using weighted averaging.
-
-    Args:
-        channel: 2D array with values only at mask positions
-        mask: boolean mask indicating known values
-        kernel: convolution kernel (default: 3x3 ones)
-
-    Returns:
-        Interpolated channel with all values filled
+    Interpolation formula.
     """
     if kernel is None:
         kernel = np.ones((3, 3))
@@ -162,16 +147,6 @@ def interpolate_missing_values(channel, mask, kernel=None):
 
 
 def demosaic(raw_data, pattern=None):
-    """
-    Complete demosaicing pipeline.
-
-    Args:
-        raw_data: 2D raw sensor array
-        pattern: optional pre-detected pattern dict
-
-    Returns:
-        RGB image (H x W x 3) with interpolated channels
-    """
     if pattern is None:
         pattern = detect_bayer_pattern(raw_data)
 
@@ -199,16 +174,7 @@ def demosaic(raw_data, pattern=None):
 
 def gamma_correction(rgb_image, p_low=0.01, p_high=99.99, gamma=0.3):
     """
-    Apply gamma correction with percentile-based normalization.
-
-    Args:
-        rgb_image: RGB image array
-        p_low: lower percentile for normalization
-        p_high: upper percentile for normalization
-        gamma: gamma correction exponent
-
-    Returns:
-        Gamma-corrected image in [0, 1] range
+    gamma correction with percentile-based normalization.
     """
     low_percentile = np.percentile(rgb_image, p_low)
     high_percentile = np.percentile(rgb_image, p_high)
@@ -222,13 +188,7 @@ def gamma_correction(rgb_image, p_low=0.01, p_high=99.99, gamma=0.3):
 
 def gray_world_white_balance(rgb_image):
     """
-    Apply gray world white balance assumption.
-
-    Args:
-        rgb_image: RGB image in [0, 1] range
-
-    Returns:
-        White-balanced image clipped to [0, 1]
+     gray world white balance assumption.
     """
     means = rgb_image.mean(axis=(0, 1))
     scale = means[1] / means  # Use green as reference

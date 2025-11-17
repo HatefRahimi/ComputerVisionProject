@@ -100,7 +100,7 @@ def combination_hdr(raw_folder):
 
 def initial_hdr_simple(raw_folder, output_path):
     """
-    Full HDR pipeline + log tone mapping + gamma + 8-bit output.
+    HDR pipeline + log tone mapping + gamma + 8-bit output.
     """
 
     # 1) HDR combine
@@ -147,7 +147,7 @@ icam_output_path = os.path.join(results, 'HDR_iCAM06.jpg')
 
 def bilateral_filter(image, spatial_sigma=2.0):
     """
-    bilateral filter using Gaussian smoothing (assignment hint).
+    bilateral filter with Gaussian smoothing.
     """
     filtered = image.copy()
     for _ in range(2):
