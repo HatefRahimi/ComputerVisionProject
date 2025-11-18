@@ -32,7 +32,7 @@ def process_raw(raw_path, output_filename="output_custom.jpg", quality=99):
 
     print("Applying custom processing pipeline...")
 
-    # Step 2: Noise reduction (optional, mild)
+    # Step 2: Noise reduction
     print("Denoising...")
     for c in range(3):
         rgb[:, :, c] = gaussian_filter(rgb[:, :, c], sigma=0.5)
@@ -44,7 +44,7 @@ def process_raw(raw_path, output_filename="output_custom.jpg", quality=99):
         if mean_val > 0:
             rgb[:, :, c] = rgb[:, :, c] / mean_val * 0.4  # Target gray
 
-    # Step 4: Tone mapping (adaptive logarithmic)
+    # Step 4: Tone mapping
     print("Tone mapping...")
     # Calculate luminance
     lum = 0.2126 * rgb[:, :, 0] + 0.7152 * rgb[:, :, 1] + 0.0722 * rgb[:, :, 2]
@@ -90,7 +90,7 @@ def process_raw(raw_path, output_filename="output_custom.jpg", quality=99):
     # Step 8: Convert to 8-bit and save
     rgb_8bit = (rgb * 255).astype(np.uint8)
 
-    # --- Save into results/ folder ---
+    # --- Save ---
     output_path = os.path.join(results_dir, output_filename)
     imageio.imwrite(output_path, rgb_8bit, quality=quality)
 
@@ -104,5 +104,4 @@ def process_raw(raw_path, output_filename="output_custom.jpg", quality=99):
 
 raw_file = "exercise_4_data/06/03.CR3"
 
-# Try the custom processing
 process_raw(raw_file, "output_custom.jpg", quality=99)

@@ -31,20 +31,19 @@ rgb_linear_image = demosaic(raw_sensor, pattern)
 # Apply gamma correction
 gamma_image = gamma_correction(rgb_linear_image, gamma=0.3)
 
-# Alternative: log curve
 
+# log curve
 
 def log_luminosity(rgb_image, p_low=0.01, p_high=99.99, alpha=10.0):
     low_percentile = np.percentile(rgb_image, p_low)
     high_percentile = np.percentile(rgb_image, p_high)
     normalized = (rgb_image - low_percentile) / \
-        (high_percentile - low_percentile)
+                 (high_percentile - low_percentile)
     normalized = np.clip(normalized, 0.0, 1.0)
     return np.log1p(alpha * normalized) / np.log1p(alpha)
 
 
 log_image = log_luminosity(rgb_linear_image)
-
 
 # Visualization
 fig, axs = plt.subplots(1, 3, figsize=(15, 5))
@@ -62,7 +61,6 @@ axs[2].axis('off')
 
 plt.tight_layout()
 plt.show()
-
 
 #############  PART 4: WHITE BALANCE ##############
 

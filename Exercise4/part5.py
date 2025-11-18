@@ -25,7 +25,7 @@ means_green = []
 means_blue = []
 
 for num in image_numbers:
-    filepath = f'{data_root}/IMG_{num}.CR3'  # Changed 'path' to 'filepath'
+    filepath = f'{data_root}/IMG_{num}.CR3'
     with rawpy.imread(filepath) as rawp:
         raw = rawp.raw_image_visible.astype(np.float32)
     means_red.append(raw[red_mask].mean())
