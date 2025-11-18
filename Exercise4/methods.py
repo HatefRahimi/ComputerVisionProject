@@ -67,7 +67,7 @@ def detect_bayer_pattern(raw_array, verbose=False):
         red_offset = (0, 1)
         blue_offset = (1, 0)
     else:
-        # Fallback: use brightness order (unreliable)
+        # use brightness order (but it is unreliable)
         red_offset = sorted_means[2][0]
         blue_offset = sorted_means[3][0]
         if verbose:
