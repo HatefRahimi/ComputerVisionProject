@@ -172,16 +172,25 @@ def demosaic(raw_data, pattern=None):
     return np.stack([red_interpolated, green_interpolated, blue_interpolated], axis=2)
 
 
+def percentile_normalize(image, p_low=0.01, p_high=99.99):
+    """
+    Normalize an image to [0, 1] using percentiles.
+    """
+    low = np.percentile(image, p_low)
+    high = np.percentile(image, p_high)
+
+    denom = max(high - low, 1e-8)  # avoid division by zero
+
+    normalized = (image - low) / denom
+    normalized = np.clip(normalized, 0.0, 1.0)
+    return normalized
+
 def gamma_correction(rgb_image, p_low=0.01, p_high=99.99, gamma=0.3):
     """
     gamma correction with percentile-based normalization.
     """
-    low_percentile = np.percentile(rgb_image, p_low)
-    high_percentile = np.percentile(rgb_image, p_high)
-
-    normalized = (rgb_image - low_percentile) / \
-        (high_percentile - low_percentile)
-    normalized = np.clip(normalized, 0.0, 1.0)
+   
+    normalized = percentile_normalize(rgb_image, p_low = p_low, p_high=p_high)
 
     return np.power(normalized, gamma)
 

@@ -8,7 +8,8 @@ from methods import (
     gamma_correction,
     gray_world_white_balance,
     demosaic,
-    detect_bayer_pattern_fixed
+    detect_bayer_pattern_fixed,
+    percentile_normalize
 )
 
 #############  PART 2: DEMOSAICING ##############
@@ -33,17 +34,15 @@ rgb_linear_image = demosaic(raw_sensor, pattern)
 # rgb_norm = np.clip(rgb_norm, 0.0, 1.0)
 # gamma_image = np.power(rgb_norm, 0.5)
 
-# gamma_image = gamma_correction(rgb_linear_image, gamma=0.3)
+gamma_image = gamma_correction(rgb_linear_image, gamma=0.3)
 
 
 # log curve
 
 def log_luminosity(rgb_image, p_low=0.01, p_high=99.99, alpha=10.0):
-    low_percentile = np.percentile(rgb_image, p_low)
-    high_percentile = np.percentile(rgb_image, p_high)
-    normalized = (rgb_image - low_percentile) / \
-                 (high_percentile - low_percentile)
-    normalized = np.clip(normalized, 0.0, 1.0)
+
+    normalized = percentile_normalize(rgb_image, p_low=p_low, p_high=p_high)
+
     return np.log1p(alpha * normalized) / np.log1p(alpha)
 
 
@@ -56,11 +55,11 @@ axs[0].set_title('Linear')
 axs[0].axis('off')
 
 axs[1].imshow(gamma_image)
-axs[1].set_title('Gamma (γ=0.3)')
+axs[1].set_title('Gamma')
 axs[1].axis('off')
 
 axs[2].imshow(log_image)
-axs[2].set_title('Log (α=10)')
+axs[2].set_title('Log')
 axs[2].axis('off')
 
 plt.tight_layout()
