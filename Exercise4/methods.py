@@ -67,7 +67,7 @@ def detect_bayer_pattern(raw_array, verbose=False):
         red_offset = (0, 1)
         blue_offset = (1, 0)
     else:
-        # use brightness order (but it is unreliable)
+        # use brightness order
         red_offset = sorted_means[2][0]
         blue_offset = sorted_means[3][0]
         if verbose:
@@ -134,7 +134,7 @@ def create_bayer_masks(shape, pattern):
     return red_mask, green_mask, blue_mask
 
 
-def interpolate_missing_values(channel, mask, kernel=None):
+def interpolation(channel, mask, kernel=None):
     """
     Interpolation formula.
     """
@@ -143,7 +143,7 @@ def interpolate_missing_values(channel, mask, kernel=None):
 
     num = convolve(channel, kernel, mode='mirror')
     denom = convolve(mask.astype(np.float32), kernel, mode='mirror')
-    return num / np.maximum(denom, 1e-6)
+    return num / denom
 
 
 def demosaic(raw_data, pattern=None):
@@ -165,9 +165,9 @@ def demosaic(raw_data, pattern=None):
     blue_channel[blue_mask] = raw_data[blue_mask]
 
     # Interpolate
-    red_interpolated = interpolate_missing_values(red_channel, red_mask)
-    green_interpolated = interpolate_missing_values(green_channel, green_mask)
-    blue_interpolated = interpolate_missing_values(blue_channel, blue_mask)
+    red_interpolated = interpolation(red_channel, red_mask)
+    green_interpolated = interpolation(green_channel, green_mask)
+    blue_interpolated = interpolation(blue_channel, blue_mask)
 
     return np.stack([red_interpolated, green_interpolated, blue_interpolated], axis=2)
 
