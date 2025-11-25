@@ -17,6 +17,7 @@ import argparse
 
 from sklearn.metrics import pairwise_distances_argmin, pairwise_distances
 from tqdm import tqdm
+from parmap import parmap
 
 # for python3: read in python2 pickled files
 import _pickle as cPickle
@@ -162,23 +163,29 @@ def assignments(descriptors, clusters):
     """
     # compute nearest neighbors
     # TODO
+    idx = pairwise_distances_argmin(descriptors, clusters)
 
     # create hard assignment
-    # assignment = np.zeros((len(descriptors), len(clusters)))
+    assignment = np.zeros((len(descriptors), len(clusters)), dtype=np.uint8)
     # TODO
+    assignment[np.arange(len(descriptors)), idx] = 1
 
-    return pairwise_distances_argmin(descriptors, clusters, metric="euclidean")
+    return assignment
 
 
 def vlad(files, mus, powernorm, gmp=False, gamma=1000):
     """
-    compute VLAD encoding for each files
+    compute VLAD encoding for each file
+
     parameters:
-        files: list of N files containing each T local descriptors of dimension
-        D
-        mus: KxD matrix of cluster centers
-        gmp: if set to True use generalized max pooling instead of sum pooling
-    returns: NxK*D matrix of encodings
+        files: list of N files containing each T local descriptors of dimension D
+        mus:   K x D matrix of cluster centers
+        powernorm: if True, apply signed sqrt (power normalization)
+        gmp:   (bonus) if True, use generalized max pooling instead of sum pooling
+        gamma: regularization parameter for GMP (unused for plain VLAD)
+
+    returns:
+        encodings: N x (K*D) matrix of encodings
     """
     K, D = mus.shape
     N = len(files)
@@ -186,173 +193,92 @@ def vlad(files, mus, powernorm, gmp=False, gamma=1000):
 
     for i, path in enumerate(tqdm(files, desc="VLAD encoding")):
         with gzip.open(path, 'rb') as ff:
-            desc = cPickle.load(ff, encoding='latin1')
+            desc = cPickle.load(ff, encoding='latin1')   # T x D
 
-        idxs = assignments(desc, mus)
+        # 1) hard assignments: T x K one-hot
+        A = assignments(desc, mus)                      # T x K
 
+        # 2) VLAD residual accumulation: K x D
         f_enc = np.zeros((K, D), dtype=np.float32)
-        for t, k in enumerate(idxs):
-            # it's faster to select only those descriptors that have
-            # this cluster as nearest neighbor and then compute the
-            # difference to the cluster center than computing the differences
-            # first and then select
-            f_enc[k] += (desc[t] - mus[k])
 
+        for k in range(K):
+            # which descriptors go to cluster k?
+            mask = A[:, k] > 0
+            if not np.any(mask):
+                continue
+
+            # descriptors for this cluster
+            x_k = desc[mask]                            # (#assigned_k, D)
+
+            # residuals to cluster center μ_k
+            residuals = x_k - mus[k]                    # (#assigned_k, D)
+
+            # sum residuals
+            f_enc[k] = residuals.sum(axis=0)
+
+        # 3) flatten to 1D: K*D
         f_enc = f_enc.reshape(-1)
 
-        # c) power normalization
+        # 4) power normalization (signed sqrt) – combats burstiness
         if powernorm:
-            # TODO
             f_enc = np.sign(f_enc) * np.sqrt(np.abs(f_enc))
 
-        # l2 normalization
-        # TODO
+        # 5) L2 normalization
         norm = np.linalg.norm(f_enc)
         if norm > 0:
             f_enc /= norm
 
         encodings[i] = f_enc
+
     return encodings
 
 
-# def _esvm_one(i, encs_test, encs_train, C):
-#     """
-#     Train one exemplar SVM for test index i and return
-#     its L2-normalized weight vector (shape (D,)).
-#     """
-#     # positive
-#     X_pos = encs_test[i : i+1]
-#     # negatives (you can subsample here if you like)
-#     X_neg = encs_train
-#     X = np.vstack([X_pos, X_neg])
-#     y = np.empty((1 + len(X_neg),), dtype=int)
-#     y[0] = 1; y[1:] = -1
-#
-#     clf = LinearSVC(C=C, class_weight='balanced',
-#                     dual=False, max_iter=10000, tol=1e-4)
-#     clf.fit(X, y)
-#     w = clf.coef_.ravel()
-#     w /= np.linalg.norm(w) + 1e-12
-#     return w
-
-# def _esvm_worker(i, encs_test, encs_train, C):
-#     # build the tiny dataset
-#     X_pos = encs_test[i : i+1]
-#     X_neg = encs_train                # you can subsample here if you like
-#     X = np.vstack([X_pos, X_neg])
-#     y = np.empty((1 + len(X_neg),), dtype=int)
-#     y[0] = 1; y[1:] = -1
-#
-#     clf = LinearSVC(C=C, class_weight='balanced',
-#                     dual=False, max_iter=10000, tol=1e-4)
-#     clf.fit(X, y)
-#
-#     w = clf.coef_.ravel()
-#     w /= np.linalg.norm(w) + 1e-12
-#     return i, w  # return the index so we can place it correctly
-
 def esvm(encs_test, encs_train, C=1000):
-    """
+    """ 
     compute a new embedding using Exemplar Classification
     compute for each encs_test encoding an E-SVM using the
-    encs_train as negatives
-    parameters:
-        encs_test: NxD matrix
-        encs_train: MxD matrix
+    encs_train as negatives   
 
-    returns: new encs_test matrix (NxD)
+    encs_test: N x D
+    encs_train: M x D
+    returns: N x D matrix (new encs_test)
     """
-    # (1)
-    # N_test, D = encs_test.shape
-    #
-    # # 1) build a delayed task for each test exemplar
-    # tasks = [
-    #     delayed(_esvm_one)(i, encs_test, encs_train, C)
-    #     for i in range(N_test)
-    # ]
-    #
-    # # 2) compute them in parallel using Dask’s default scheduler
-    # #    you can pass scheduler="processes" or "threads"
-    # with ProgressBar():
-    #     results = compute(*tasks, scheduler="threads")
-    # # results = compute(*tasks, scheduler="processes")
-    #
-    # # 3) stack into (N_test, D)
-    # return np.vstack(results)
-
-    # (2)
-    # N_test, D = encs_test.shape
-    # results = [None] * N_test
-    #
-    # # n_workers defaults to number of CPU cores
-    # with ThreadPoolExecutor(max_workers=4) as exec:
-    #     futures = {
-    #         exec.submit(_esvm_worker, i, encs_test, encs_train, C): i
-    #         for i in range(N_test)
-    #     }
-    #
-    #     # as_completed yields futures as they finish; tqdm tracks them
-    #     for future in tqdm(
-    #             as_completed(futures),
-    #             total=N_test,
-    #             desc="ESVM",
-    #             unit="it",
-    #             leave=True
-    #     ):
-    #         i, w = future.result()
-    #         results[i] = w
-    #
-    # # stack into (N_test, D)
-    # return np.stack(results, axis=0)
-
-    # (3) main
-    # set up labels
-    # TODO
-    N_test, D = enc_test.shape
+    N_test, D = encs_test.shape
     N_train = encs_train.shape[0]
 
     def loop(i):
-        # compute SVM
-        # and make feature transformation
-        # TODO
-        # 1) Build the training data for this exemplar
-        X_pos = encs_test[i:i + 1]  # shape (1, D)
-        X_neg = encs_train  # shape (N_train, D)
-        X = np.vstack([X_pos, X_neg])  # (1+N_train, D)
+        # 1) build tiny training set: 1 positive, many negatives
+        X_pos = encs_test[i:i+1]        # shape (1, D)
+        X_neg = encs_train              # shape (M, D)
+        X = np.vstack([X_pos, X_neg])   # (1+M, D)
 
-        # 2) Labels: +1 for exemplar, -1 for all negatives
         y = np.empty((1 + N_train,), dtype=np.int8)
         y[0] = 1
         y[1:] = -1
 
-        # 3) Train a LinearSVC
+        # 2) train Linear SVM for this exemplar
         clf = LinearSVC(
             C=C,
             class_weight='balanced',
-            dual=False,  # faster when D >> N
+            dual=False,
             max_iter=1000,
             tol=1e-2,
         )
         clf.fit(X, y)
 
-        # 4) Extract & L2‐normalize the weight vector
-        w = clf.coef_.ravel()  # shape (D,)
+        # 3) use normalized weight vector as new embedding
+        w = clf.coef_.ravel()           # (D,)
         norm = np.linalg.norm(w)
         if norm > 0:
             w /= norm
 
-        # return as shape (1, D) so concatenation works
+        # we return shape (1, D) so concatenation works
         return w[np.newaxis, :]
 
-    #
-    # let's do that in parallel:
-    # if that doesn't work for you, just exchange 'parmap' with 'map'
-    # Even better: use DASK arrays instead, then everything should be
-    # parallelized
-    # new_encs = list(map(loop, range(N_test)))
-    new_encs = [loop(i) for i in tqdm(range(N_test), desc="ESVM")]
-    new_encs = np.concatenate(new_encs, axis=0)
-    # return new encodings
+    # parallel over all test exemplars
+    indices = range(N_test)
+    new_encs_list = list(parmap(loop, tqdm(indices)))
+    new_encs = np.concatenate(new_encs_list, axis=0)   # N x D
     return new_encs
 
 
