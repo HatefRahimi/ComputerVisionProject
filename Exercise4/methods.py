@@ -185,12 +185,13 @@ def percentile_normalize(image, p_low=0.01, p_high=99.99):
     normalized = np.clip(normalized, 0.0, 1.0)
     return normalized
 
+
 def gamma_correction(rgb_image, p_low=0.01, p_high=99.99, gamma=0.3):
     """
     gamma correction with percentile-based normalization.
     """
-   
-    normalized = percentile_normalize(rgb_image, p_low = p_low, p_high=p_high)
+
+    normalized = percentile_normalize(rgb_image, p_low=p_low, p_high=p_high)
 
     return np.power(normalized, gamma)
 
