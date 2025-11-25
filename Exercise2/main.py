@@ -182,10 +182,10 @@ def vlad(files, mus, powernorm, gmp=False, gamma=1000):
         with gzip.open(path, 'rb') as ff:
             desc = cPickle.load(ff, encoding='latin1')   # T x D
 
-        # 1) hard assignments: T x K one-hot
+        # hard assignments: T x K one-hot
         A = assignments(desc, mus)                      # T x K
 
-        # 2) VLAD residual accumulation: K x D
+        # VLAD residual accumulation: K x D
         f_enc = np.zeros((K, D), dtype=np.float32)
 
         for k in range(K):
@@ -203,14 +203,14 @@ def vlad(files, mus, powernorm, gmp=False, gamma=1000):
             # sum residuals
             f_enc[k] = residuals.sum(axis=0)
 
-        # 3) flatten to 1D: K*D
+        # flatten to 1D: K*D
         f_enc = f_enc.reshape(-1)
 
-        # 4) power normalization (signed sqrt) – combats burstiness
+        # power normalization (signed sqrt)
         if powernorm:
             f_enc = np.sign(f_enc) * np.sqrt(np.abs(f_enc))
 
-        # 5) L2 normalization
+        # L2 normalization
         norm = np.linalg.norm(f_enc)
         if norm > 0:
             f_enc /= norm
@@ -234,7 +234,7 @@ def esvm(encs_test, encs_train, C=1000):
     N_train = encs_train.shape[0]
 
     def loop(i):
-        # 1) build tiny training set: 1 positive, many negatives
+        # build tiny training set: 1 positive, many negatives
         X_pos = encs_test[i:i+1]        # shape (1, D)
         X_neg = encs_train              # shape (M, D)
         X = np.vstack([X_pos, X_neg])   # (1+M, D)
@@ -243,7 +243,7 @@ def esvm(encs_test, encs_train, C=1000):
         y[0] = 1
         y[1:] = -1
 
-        # 2) train Linear SVM for this exemplar
+        # train Linear SVM for this exemplar
         clf = LinearSVC(
             C=C,
             class_weight='balanced',
@@ -253,7 +253,7 @@ def esvm(encs_test, encs_train, C=1000):
         )
         clf.fit(X, y)
 
-        # 3) use normalized weight vector as new embedding
+        # use normalized weight vector as new embedding
         w = clf.coef_.ravel()           # (D,)
         norm = np.linalg.norm(w)
         if norm > 0:

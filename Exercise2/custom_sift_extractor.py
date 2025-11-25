@@ -38,7 +38,7 @@ class CustomSIFTExtractor:
         if self.use_clahe:
             self._clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 
-    def compute(self, img_path: str) -> np.ndarray:
+    def computeDescs(self, img_path: str) -> np.ndarray:
         """
         Return Hellinger-normalized SIFT descriptors (N,128) float32.
         """
@@ -99,7 +99,7 @@ class CustomSIFTExtractor:
                 missing += 1
                 continue
 
-            desc = self.compute(img_path)
+            desc = self.computeDescs(img_path)
             with gzip.open(out_path, 'wb') as f:
                 cPickle.dump(desc.astype(np.float32), f, -1)
 

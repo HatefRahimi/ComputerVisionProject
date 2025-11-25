@@ -167,22 +167,29 @@ def assignments(descriptors, clusters):
     """
     # compute nearest neighbors
     # TODO
+    idx = pairwise_distances_argmin(descriptors, clusters)
 
     # create hard assignment
-    # assignment = np.zeros((len(descriptors), len(clusters)))
+    assignment = np.zeros((len(descriptors), len(clusters)), dtype=np.uint8)
     # TODO
+    assignment[np.arange(len(descriptors)), idx] = 1
 
-    return pairwise_distances_argmin(descriptors, clusters, metric="euclidean")
+    return assignment
 
 
 def vlad(files, mus, powernorm, gmp=False, gamma=1000):
     """
-    compute VLAD encoding for each files
+    compute VLAD encoding for each file
+
     parameters:
         files: list of N files containing each T local descriptors of dimension D
         mus:   KxD matrix of cluster centers
-        gmp:   if set to True use generalized max pooling instead of sum pooling
-    returns: NxK*D matrix of encodings
+        powernorm: if True, apply signed sqrt (power normalization)
+        gmp:   if True, use generalized max pooling instead of sum pooling
+        gamma: regularization parameter for GMP
+
+    returns:
+        encodings: NxK*D matrix of encodings
     """
     K, D = mus.shape
     N = len(files)
@@ -197,29 +204,33 @@ def vlad(files, mus, powernorm, gmp=False, gamma=1000):
             # leave zero row to keep alignment
             continue
 
-        # ensure descriptor dims match codebook
         if desc.shape[1] != D:
             desc = desc[:, :D]
 
-        idxs = assignments(desc, mus)
+        # Get assignment matrix (T, K) - one-hot encoded
+        A = assignments(desc, mus)
 
         # pooled residuals per cluster
         f_enc = np.zeros((K, D), dtype=np.float32)
 
         if gmp:
-            # Generalized Max Pooling via Ridge
+            # Generalized Max Pooling with Ridge
             for k in range(K):
-                mask = (idxs == k)
+                # which descriptors go to cluster k?
+                mask = (A[:, k] > 0)
                 n_k = int(np.sum(mask))
                 if n_k == 0:
                     continue
 
+                # residuals for descriptors assigned to cluster k
                 R = desc[mask] - mus[k]  # (n_k, D)
 
+                # if only one descriptor, just use it
                 if n_k == 1:
                     f_enc[k] = R[0].astype(np.float32)
                     continue
 
+                # otherwise, use Ridge regression for GMP
                 try:
                     ridge = Ridge(
                         alpha=float(gamma),
@@ -227,24 +238,37 @@ def vlad(files, mus, powernorm, gmp=False, gamma=1000):
                         fit_intercept=False,
                         max_iter=500
                     )
-                    ridge.fit(R, np.ones((n_k,), dtype=np.float32))
-                    coef = ridge.coef_                # (D,)
-                    f_enc[k] = coef.astype(np.float32)
-                except Exception:
-                    # fallback: mean residual
-                    f_enc[k] = np.mean(R, axis=0).astype(np.float32)
+                    y = np.ones(n_k, dtype=np.float32)
+                    ridge.fit(R, y)
+                    f_enc[k] = ridge.coef_.astype(np.float32)
+                except (np.linalg.LinAlgError, ValueError) as e:
+                    # fallback to sum pooling if Ridge fails
+                    f_enc[k] = np.sum(R, axis=0).astype(np.float32)
         else:
-            # Standard VLAD (sum pooling)
-            for t, k in enumerate(idxs):
-                f_enc[k] += (desc[t] - mus[k])
+            # Standard VLAD: Sum Pooling
+            for k in range(K):
+                # which descriptors go to cluster k?
+                mask = (A[:, k] > 0)
+                if not np.any(mask):
+                    continue
 
-        # c) power normalization
+                # descriptors for this cluster
+                x_k = desc[mask]  # (n_k, D)
+
+                # residuals to cluster center μ_k
+                residuals = x_k - mus[k]  # (n_k, D)
+
+                # sum residuals
+                f_enc[k] = residuals.sum(axis=0)
+
+        # flatten to 1D: K*D
+        f_enc = f_enc.reshape(-1)
+
+        # power normalization (signed sqrt)
         if powernorm:
-            # TODO
             f_enc = np.sign(f_enc) * np.sqrt(np.abs(f_enc))
 
-        # l2 normalization of final vector
-        f_enc = f_enc.reshape(-1).astype(np.float32)
+        # L2 normalization
         norm = np.linalg.norm(f_enc)
         if norm > 0:
             f_enc /= norm
@@ -255,49 +279,53 @@ def vlad(files, mus, powernorm, gmp=False, gamma=1000):
 
 
 def esvm(encs_test, encs_train, C=1000):
-    """
+    """ 
     compute a new embedding using Exemplar Classification
-    parameters:
-        encs_test: NxD matrix   (each row is a test exemplar)
-        encs_train: MxD matrix  (negatives)
-    returns:
-        new encs_test matrix (NxD) with per-exemplar SVM weights
+    compute for each encs_test encoding an E-SVM using the
+    encs_train as negatives   
+
+    encs_test: N x D
+    encs_train: M x D
+    returns: N x D matrix (new encs_test)
     """
-    # shapes
     N_test, D = encs_test.shape
     N_train = encs_train.shape[0]
 
-    y = np.empty((1 + N_train,), dtype=np.int8)
-    y[0] = 1
-    y[1:] = -1
+    def loop(i):
+        # 1) build tiny training set: 1 positive, many negatives
+        X_pos = encs_test[i:i+1]        # shape (1, D)
+        X_neg = encs_train              # shape (M, D)
+        X = np.vstack([X_pos, X_neg])   # (1+M, D)
 
-    def fit_one(i):
-        # compute SVM
-        # and make feature transformation
-        # TODO
-        # 1) Build the training data for this exemplar
-        X_pos = encs_test[i:i+1]
-        X = np.vstack([X_pos, encs_train])
+        # labels: +1 for the exemplar, -1 for all training samples
+        y = np.empty((1 + N_train,), dtype=np.int8)
+        y[0] = 1
+        y[1:] = -1
 
-        # Train linear SVM
+        # 2) train Linear SVM for this exemplar
         clf = LinearSVC(
             C=C,
             class_weight='balanced',
-            dual=False,            # faster when D >> N
+            dual=False,      # faster when D >> N
             max_iter=1000,
             tol=1e-2,
         )
         clf.fit(X, y)
 
-        # L2-normalize the weight vector
-        w = clf.coef_.ravel().astype(np.float32)
-        n = np.linalg.norm(w)
-        if n > 0:
-            w /= n
-        return w
+        # 3) use normalized weight vector as new embedding
+        w = clf.coef_.ravel()           # (D,)
+        norm = np.linalg.norm(w)
+        if norm > 0:
+            w /= norm
 
-    Ws = [fit_one(i) for i in tqdm(range(N_test), desc="ESVM")]
-    return np.vstack(Ws)
+        # return (1, D) so concatenation works cleanly
+        return w[np.newaxis, :]
+
+    # parallel over all test exemplars (same style as group part)
+    indices = range(N_test)
+    new_encs_list = list(parmap(loop, tqdm(indices, desc="ESVM")))
+    new_encs = np.concatenate(new_encs_list, axis=0)   # N x D
+    return new_encs
 
 
 def distances(encs):
