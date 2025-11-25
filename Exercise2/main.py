@@ -1,16 +1,3 @@
-# import glob, pickle, gzip
-#
-# with open("data/icdar17_labels_train.txt") as f:
-#     basename, writer = f.readline().split()
-#
-# # suppose basename = "1000-IMG_MAX_116390"
-# path = f"data/local_features/train/{basename}_SIFT_patch_pr.pkl.gz"
-# with gzip.open(path, "rb") as gz:
-#     # tell pickle to map Python2 bytes → Python3 bytes
-#     desc = pickle.load(gz, encoding="latin1")
-#
-# print(basename, "→ descriptor shape:", desc.shape)
-
 import os
 import shlex
 import argparse
