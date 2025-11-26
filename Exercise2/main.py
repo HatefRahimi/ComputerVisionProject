@@ -183,22 +183,22 @@ def vlad(files, mus, powernorm, gmp=False, gamma=1000):
             desc = cPickle.load(ff, encoding='latin1')   # T x D
 
         # hard assignments: T x K one-hot
-        A = assignments(desc, mus)                      # T x K
+        assignment_matrix = assignments(desc, mus)      # T x K
 
         # VLAD residual accumulation: K x D
         f_enc = np.zeros((K, D), dtype=np.float32)
 
         for k in range(K):
             # which descriptors go to cluster k?
-            mask = A[:, k] > 0
+            mask = assignment_matrix[:, k] > 0
             if not np.any(mask):
                 continue
 
             # descriptors for this cluster
-            x_k = desc[mask]                            # (#assigned_k, D)
+            cluster_descriptors = desc[mask]            # (#assigned, D)
 
             # residuals to cluster center μ_k
-            residuals = x_k - mus[k]                    # (#assigned_k, D)
+            residuals = cluster_descriptors - mus[k]    # (#assigned, D)
 
             # sum residuals
             f_enc[k] = residuals.sum(axis=0)

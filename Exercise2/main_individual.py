@@ -208,7 +208,7 @@ def vlad(files, mus, powernorm, gmp=False, gamma=1000):
             desc = desc[:, :D]
 
         # Get assignment matrix (T, K) - one-hot encoded
-        A = assignments(desc, mus)
+        assignment_matrix = assignments(desc, mus)
 
         # pooled residuals per cluster
         f_enc = np.zeros((K, D), dtype=np.float32)
@@ -217,17 +217,17 @@ def vlad(files, mus, powernorm, gmp=False, gamma=1000):
             # Generalized Max Pooling with Ridge
             for k in range(K):
                 # which descriptors go to cluster k?
-                mask = (A[:, k] > 0)
-                n_k = int(np.sum(mask))
-                if n_k == 0:
+                mask = (assignment_matrix[:, k] > 0)
+                descriptors_in_cluster = int(np.sum(mask))
+                if descriptors_in_cluster == 0:
                     continue
 
                 # residuals for descriptors assigned to cluster k
-                R = desc[mask] - mus[k]  # (n_k, D)
+                residuals = desc[mask] - mus[k]  # (#assigned, D)
 
                 # if only one descriptor, just use it
-                if n_k == 1:
-                    f_enc[k] = R[0].astype(np.float32)
+                if descriptors_in_cluster == 1:
+                    f_enc[k] = residuals[0].astype(np.float32)
                     continue
 
                 # otherwise, use Ridge regression for GMP
@@ -238,25 +238,25 @@ def vlad(files, mus, powernorm, gmp=False, gamma=1000):
                         fit_intercept=False,
                         max_iter=500
                     )
-                    y = np.ones(n_k, dtype=np.float32)
-                    ridge.fit(R, y)
+                    y = np.ones(descriptors_in_cluster, dtype=np.float32)
+                    ridge.fit(residuals, y)
                     f_enc[k] = ridge.coef_.astype(np.float32)
-                except (np.linalg.LinAlgError, ValueError) as e:
+                except (np.linalg.LinAlgError, ValueError):
                     # fallback to sum pooling if Ridge fails
-                    f_enc[k] = np.sum(R, axis=0).astype(np.float32)
+                    f_enc[k] = np.sum(residuals, axis=0).astype(np.float32)
         else:
             # Standard VLAD: Sum Pooling
             for k in range(K):
                 # which descriptors go to cluster k?
-                mask = (A[:, k] > 0)
+                mask = (assignment_matrix[:, k] > 0)
                 if not np.any(mask):
                     continue
 
                 # descriptors for this cluster
-                x_k = desc[mask]  # (n_k, D)
+                cluster_descriptors = desc[mask]  # (#assigned, D)
 
                 # residuals to cluster center μ_k
-                residuals = x_k - mus[k]  # (n_k, D)
+                residuals = cluster_descriptors - mus[k]  # (#assigned, D)
 
                 # sum residuals
                 f_enc[k] = residuals.sum(axis=0)
