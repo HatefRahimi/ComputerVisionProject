@@ -22,11 +22,11 @@ from custom_sift_extractor import CustomSIFTExtractor
 
 
 # Use the BINARY folders
-TRAIN_IMAGE_DIRS = ["data/icdar2017-training-binary"]
-TEST_IMAGE_DIRS = ["data/icdar2017-testing-binary"]
+TRAIN_IMAGE_DIRS = ["data/icdar2017-training-color"]
+TEST_IMAGE_DIRS = ["data/icdar2017-testing-color"]
 
-OUT_TRAIN = "data/local_features/train1"
-OUT_TEST = "data/local_features/test1"
+OUT_TRAIN = "data/local_features/trainColor1"
+OUT_TEST = "data/local_features/testColor1"
 
 
 def parseArgs(parser):
