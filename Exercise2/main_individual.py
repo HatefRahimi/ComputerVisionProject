@@ -177,6 +177,56 @@ def assignments(descriptors, clusters):
     return assignment
 
 
+def gmp_pooling(desc, mus, assignment_matrix, gamma):
+    """GMP with Ridge regression"""
+    K, D = mus.shape
+    pooled_residuals = np.zeros((K, D), dtype=np.float32)
+
+    for k in range(K):
+        mask = assignment_matrix[:, k] > 0
+        descriptors_in_cluster = int(np.sum(mask))
+        if descriptors_in_cluster == 0:
+            continue
+
+        residuals = desc[mask] - mus[k]  # (#assigned, D)
+
+        if descriptors_in_cluster == 1:
+            pooled_residuals[k] = residuals[0].astype(np.float32)
+            continue
+
+        try:
+            ridge = Ridge(
+                alpha=float(gamma),
+                solver='sparse_cg',
+                fit_intercept=False,
+                max_iter=500
+            )
+            y = np.ones(descriptors_in_cluster, dtype=np.float32)
+            ridge.fit(residuals, y)
+            pooled_residuals[k] = ridge.coef_.astype(np.float32)
+        except (np.linalg.LinAlgError, ValueError):
+            pooled_residuals[k] = np.sum(residuals, axis=0).astype(np.float32)
+
+    return pooled_residuals
+
+
+def sum_pooling(desc, mus, assignment_matrix):
+    """Standard VLAD sum pooling per cluster."""
+    K, D = mus.shape
+    pooled_residuals = np.zeros((K, D), dtype=np.float32)
+
+    for k in range(K):
+        mask = assignment_matrix[:, k] > 0
+        if not np.any(mask):
+            continue
+
+        cluster_descriptors = desc[mask]  # (#assigned, D)
+        residuals = cluster_descriptors - mus[k]  # (#assigned, D)
+        pooled_residuals[k] = residuals.sum(axis=0)
+
+    return pooled_residuals
+
+
 def vlad(files, mus, powernorm, gmp=False, gamma=1000):
     """
     compute VLAD encoding for each file
@@ -210,59 +260,13 @@ def vlad(files, mus, powernorm, gmp=False, gamma=1000):
         # Get assignment matrix (T, K) - one-hot encoded
         assignment_matrix = assignments(desc, mus)
 
-        # pooled residuals per cluster
-        f_enc = np.zeros((K, D), dtype=np.float32)
-
         if gmp:
-            # Generalized Max Pooling with Ridge
-            for k in range(K):
-                # which descriptors go to cluster k?
-                mask = (assignment_matrix[:, k] > 0)
-                descriptors_in_cluster = int(np.sum(mask))
-                if descriptors_in_cluster == 0:
-                    continue
-
-                # residuals for descriptors assigned to cluster k
-                residuals = desc[mask] - mus[k]  # (#assigned, D)
-
-                # if only one descriptor, just use it
-                if descriptors_in_cluster == 1:
-                    f_enc[k] = residuals[0].astype(np.float32)
-                    continue
-
-                # otherwise, use Ridge regression for GMP
-                try:
-                    ridge = Ridge(
-                        alpha=float(gamma),
-                        solver='sparse_cg',
-                        fit_intercept=False,
-                        max_iter=500
-                    )
-                    y = np.ones(descriptors_in_cluster, dtype=np.float32)
-                    ridge.fit(residuals, y)
-                    f_enc[k] = ridge.coef_.astype(np.float32)
-                except (np.linalg.LinAlgError, ValueError):
-                    # fallback to sum pooling if Ridge fails
-                    f_enc[k] = np.sum(residuals, axis=0).astype(np.float32)
+            pooled_residuals = gmp_pooling(desc, mus, assignment_matrix, gamma)
         else:
-            # Standard VLAD: Sum Pooling
-            for k in range(K):
-                # which descriptors go to cluster k?
-                mask = (assignment_matrix[:, k] > 0)
-                if not np.any(mask):
-                    continue
-
-                # descriptors for this cluster
-                cluster_descriptors = desc[mask]  # (#assigned, D)
-
-                # residuals to cluster center μ_k
-                residuals = cluster_descriptors - mus[k]  # (#assigned, D)
-
-                # sum residuals
-                f_enc[k] = residuals.sum(axis=0)
+            pooled_residuals = sum_pooling(desc, mus, assignment_matrix)
 
         # flatten to 1D: K*D
-        f_enc = f_enc.reshape(-1)
+        f_enc = pooled_residuals.reshape(-1)
 
         # power normalization (signed sqrt)
         if powernorm:
@@ -437,6 +441,24 @@ def apply_pca_whitening(enc_train, enc_test, n_components=1000, seed=42):
     return enc_train_p.astype(np.float32), enc_test_p.astype(np.float32), pca
 
 
+def load_or_compute_encodings(files, mus, fname, powernorm, gmp, gamma, overwrite=False):
+    """Load encodings from disk if present, otherwise compute and persist them."""
+    if not os.path.exists(fname) or overwrite:
+        encodings = vlad(
+            files,
+            mus,
+            powernorm=powernorm,
+            gmp=gmp,
+            gamma=gamma
+        )
+        with gzip.open(fname, 'wb') as fOut:
+            cPickle.dump(encodings, fOut, -1)
+    else:
+        with gzip.open(fname, 'rb') as f:
+            encodings = cPickle.load(f)
+    return encodings
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('retrieval')
     parser = parseArgs(parser)
@@ -560,35 +582,27 @@ if __name__ == '__main__':
         # b) VLAD encoding
         fname = 'enc_train_gmp{}.pkl.gz'.format(
             args.gamma) if args.gmp else 'enc_train.pkl.gz'
-        if not os.path.exists(fname) or args.overwrite:
-            enc_train = vlad(
-                files_train,
-                mus,
-                powernorm=args.powernorm,
-                gmp=args.gmp,
-                gamma=args.gamma
-            )
-            with gzip.open(fname, 'wb') as fOut:
-                cPickle.dump(enc_train, fOut, -1)
-        else:
-            with gzip.open(fname, 'rb') as f:
-                enc_train = cPickle.load(f)
+        enc_train = load_or_compute_encodings(
+            files_train,
+            mus,
+            fname,
+            powernorm=args.powernorm,
+            gmp=args.gmp,
+            gamma=args.gamma,
+            overwrite=args.overwrite
+        )
 
         fname = 'enc_test_gmp{}.pkl.gz'.format(
             args.gamma) if args.gmp else 'enc_test.pkl.gz'
-        if not os.path.exists(fname) or args.overwrite:
-            enc_test = vlad(
-                files_test,
-                mus,
-                powernorm=args.powernorm,
-                gmp=args.gmp,
-                gamma=args.gamma
-            )
-            with gzip.open(fname, 'wb') as fOut:
-                cPickle.dump(enc_test, fOut, -1)
-        else:
-            with gzip.open(fname, 'rb') as f:
-                enc_test = cPickle.load(f)
+        enc_test = load_or_compute_encodings(
+            files_test,
+            mus,
+            fname,
+            powernorm=args.powernorm,
+            gmp=args.gmp,
+            gamma=args.gamma,
+            overwrite=args.overwrite
+        )
 
         # cross-evaluate test encodings
         print('> evaluate')
