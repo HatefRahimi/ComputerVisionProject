@@ -416,7 +416,7 @@ def multi_vlad_encode(files, codebooks, powernorm, gmp=False, gamma=1000):
     return np.concatenate(enc_list, axis=1)
 
 
-def apply_pca_whitening(enc_train, enc_test, n_components=1000, seed=42):
+def pca_whitening(enc_train, enc_test, n_components=1000, seed=42):
     """
     PCA with whitening, fit on train, transform test.
     Caps components to valid range: min(n_components, train_dim, train_size-1).
@@ -441,8 +441,8 @@ def apply_pca_whitening(enc_train, enc_test, n_components=1000, seed=42):
     return enc_train_p.astype(np.float32), enc_test_p.astype(np.float32), pca
 
 
-def load_or_compute_encodings(files, mus, fname, powernorm, gmp, gamma, overwrite=False):
-    """Load encodings from disk if present, otherwise compute and persist them."""
+def fetch_encodings(files, mus, fname, powernorm, gmp, gamma, overwrite=False):
+    """Load encodings from disk if present; otherwise compute and save them."""
     if not os.path.exists(fname) or overwrite:
         encodings = vlad(
             files,
@@ -497,8 +497,8 @@ if __name__ == '__main__':
     )
     print('#test: {}'.format(len(files_test)))
 
-    # Report on how many descriptor files exist and are not empty
-    def _count_desc_stats(file_list):
+    # Number of descriptor files that exist
+    def descriptor_stats(file_list):
         exist = nonempty = rows = 0
         for p in file_list:
             if not os.path.exists(p):
@@ -514,8 +514,8 @@ if __name__ == '__main__':
                 pass
         return exist, nonempty, rows
 
-    tr_exist, tr_nonempty, tr_rows = _count_desc_stats(files_train)
-    te_exist, te_nonempty, te_rows = _count_desc_stats(files_test)
+    tr_exist, tr_nonempty, tr_rows = descriptor_stats(files_train)
+    te_exist, te_nonempty, te_rows = descriptor_stats(files_test)
     print(f"[Part (e)] Train1 descriptors: {tr_exist} files present, "
           f"{tr_nonempty} non-empty, {tr_rows} total SIFT vectors.")
     print(f"[Part (e)] Test1  descriptors: {te_exist} files present, "
@@ -551,7 +551,7 @@ if __name__ == '__main__':
             f"> Multi-VLAD shapes: train {enc_train.shape}, test {enc_test.shape}")
 
         # PCA whitening
-        enc_train_p, enc_test_p, pca = apply_pca_whitening(
+        enc_train_p, enc_test_p, pca = pca_whitening(
             enc_train, enc_test, n_components=args.pca_components, seed=42
         )
 
@@ -582,7 +582,7 @@ if __name__ == '__main__':
         # b) VLAD encoding
         fname = 'enc_train_gmp{}.pkl.gz'.format(
             args.gamma) if args.gmp else 'enc_train.pkl.gz'
-        enc_train = load_or_compute_encodings(
+        enc_train = fetch_encodings(
             files_train,
             mus,
             fname,
@@ -594,7 +594,7 @@ if __name__ == '__main__':
 
         fname = 'enc_test_gmp{}.pkl.gz'.format(
             args.gamma) if args.gmp else 'enc_test.pkl.gz'
-        enc_test = load_or_compute_encodings(
+        enc_test = fetch_encodings(
             files_test,
             mus,
             fname,
