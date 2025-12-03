@@ -8,11 +8,11 @@ from planes import fit_plane, point_to_plane_distance
 
 np.random.seed(42)
 
-data = loadmat("data/example3kinect.mat")
-point_cloud = data['cloud3']
+data = loadmat("data/example2kinect.mat")
+point_cloud = data['cloud2']
 
 
-amplitude_image = data['amplitudes3']
+amplitude_image = data['amplitudes2']
 plt.figure()
 plt.imshow(amplitude_image, cmap='gray')
 plt.title("Amplitude Image (A)")
@@ -78,7 +78,7 @@ plt.show()
 
 # For floor detection
 floor_plane, floor_inliers_idx = ransac_plane_fit(
-    valid_points, threshold=0.02, max_iterations=1000)
+    valid_points, threshold=0.001, max_iterations=1000)
 
 if len(floor_inliers_idx) == 0:
     print("No floor detected.")

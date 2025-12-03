@@ -3,14 +3,14 @@ from scipy.io import loadmat
 import matplotlib.pyplot as plt
 from scipy.ndimage import label
 from scipy.ndimage import binary_opening, binary_closing
-from first import fit_plane, point_to_plane_distance
+from planes import fit_plane, point_to_plane_distance
 
 np.random.seed(42)
 
 # Load data
-data = loadmat("data/example2kinect.mat")
-point_cloud = data['cloud2']
-amplitude_image = data['amplitudes2']
+data = loadmat("data/example1kinect.mat")
+point_cloud = data['cloud1']
+amplitude_image = data['amplitudes1']
 
 
 def mlesac_plane_fit(points, threshold=0.02, max_iterations=1000, gamma=None):
@@ -22,7 +22,7 @@ def mlesac_plane_fit(points, threshold=0.02, max_iterations=1000, gamma=None):
     num_points = points.shape[0]
 
     if gamma is None:
-        gamma = threshold ** 2
+        gamma = (2 * threshold) ** 2
 
     for _ in range(max_iterations):
         indices = np.random.choice(num_points, 3, replace=False)
@@ -62,7 +62,7 @@ def preemptive_ransac(points, M=1000, B=500, threshold=0.02):
         normal, d = fit_plane(sample[0], sample[1], sample[2])
 
         if normal is not None:
-            hypotheses.append({'plane': (normal, d), 'cost': 0.0})
+            hypotheses.append({'plane': (normal, d), 'score': 0})
 
     if len(hypotheses) == 0:
         return None, []
@@ -88,11 +88,11 @@ def preemptive_ransac(points, M=1000, B=500, threshold=0.02):
             block_points = points[eval_slice]
             distances = point_to_plane_distance(block_points, normal, d)
             inliers = np.sum(distances < threshold)
-            hyp['cost'] -= inliers  # Negative because we want max inliers
+            hyp['score'] += inliers
 
         # Sort and keep best
         current_hypotheses = sorted(
-            current_hypotheses, key=lambda h: h['cost'])
+            current_hypotheses, key=lambda h: h['score'], reverse=True)
         current_hypotheses = current_hypotheses[:keep_count]
         evaluated_points += points_to_eval
 
@@ -112,9 +112,13 @@ valid_points = point_cloud[valid_mask]
 # Detect floor with MLESAC
 print("Detecting floor with MLESAC...")
 floor_plane, best_inliers = mlesac_plane_fit(
-    valid_points, threshold=0.02, max_iterations=1000)
+    valid_points, threshold=0.08, max_iterations=1000)
 
-print(f"Floor inliers found: {len(best_inliers)}")
+num_floor_inliers = len(best_inliers)
+num_floor_outliers = len(valid_points) - num_floor_inliers
+
+print(f"Floor inliers found: {num_floor_inliers}")
+print(f"Floor outliers found: {num_floor_outliers}")
 
 # Visualize floor mask
 floor_mask = np.zeros(valid_points.shape[0], dtype=np.uint8)
@@ -145,7 +149,7 @@ print(f"Non-floor points: {len(non_floor_points)}")
 
 # Preemptive RANSAC
 box_plane, box_inliers_idx = preemptive_ransac(
-    non_floor_points, M=10, B=10, threshold=0.01)
+    non_floor_points, M=100, B=100, threshold=0.1)
 
 print(f"Box top inliers found: {len(box_inliers_idx)}")
 
