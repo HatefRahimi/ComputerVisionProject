@@ -65,20 +65,20 @@ if __name__ == '__main__':
     descriptors = loadRandomDescriptors(files_train, max_descriptors=500_000)
     print("Sampled descriptors:", descriptors.shape)
 
-    if not os.path.exists('mus.pkl.gz'):
+    if not os.path.exists('mus_binary.pkl.gz'):
         print('> loaded {} descriptors:'.format(len(descriptors)))
         K = 100
         mus = dictionary(descriptors, n_clusters=K)
         print("Codebook centers shape:", mus.shape)
         print('> compute dictionary')
-        with gzip.open('mus.pkl.gz', 'wb') as fOut:
+        with gzip.open('mus_binary.pkl.gz', 'wb') as fOut:
             cPickle.dump(mus, fOut, -1)
     else:
-        with gzip.open('mus.pkl.gz', 'rb') as f:
+        with gzip.open('mus_binary.pkl.gz', 'rb') as f:
             mus = cPickle.load(f)
 
-    # b) VLAD encoding - use gmp=False for sum pooling (group solution)
-    fname = 'enc_train.pkl.gz'
+    # b) VLAD encoding - use separate filenames for binary images
+    fname = 'enc_train_binary.pkl.gz'
     enc_train = fetch_encodings(
         files_train,
         mus,
@@ -89,7 +89,7 @@ if __name__ == '__main__':
         overwrite=args.overwrite
     )
 
-    fname = 'enc_test.pkl.gz'
+    fname = 'enc_test_binary.pkl.gz'
     enc_test = fetch_encodings(
         files_test,
         mus,

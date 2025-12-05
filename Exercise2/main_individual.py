@@ -1,3 +1,12 @@
+"""
+Individual Solution: VLAD-based Writer Identification with Bonus Features
+- Part (e): Custom SIFT extraction
+- Part (f): Generalized Max Pooling (GMP) - just call vlad(gmp=True)
+- Part (g): Multi-VLAD with PCA whitening
+
+Uses shared vlad_core module - NO need to redefine vlad()!
+Just call vlad(gmp=True) for GMP or vlad(gmp=False) for sum pooling
+"""
 import os
 import argparse
 import gzip
@@ -274,21 +283,21 @@ if __name__ == '__main__':
         print(
             f"> Using {'GMP' if args.gmp else 'SUM'} pooling with gamma={args.gamma}")
 
-        if not os.path.exists('mus.pkl.gz'):
+        if not os.path.exists('mus_color.pkl.gz'):
             print('> loaded {} descriptors:'.format(len(descriptors)))
             K = args.n_clusters
             mus = dictionary(descriptors, n_clusters=K)
             print("Codebook centers shape:", mus.shape)
             print('> compute dictionary')
-            with gzip.open('mus.pkl.gz', 'wb') as fOut:
+            with gzip.open('mus_color.pkl.gz', 'wb') as fOut:
                 cPickle.dump(mus, fOut, -1)
         else:
-            with gzip.open('mus.pkl.gz', 'rb') as f:
+            with gzip.open('mus_color.pkl.gz', 'rb') as f:
                 mus = cPickle.load(f)
 
         # VLAD encoding - just pass gmp flag! vlad() handles the rest
-        fname = 'enc_train_gmp{}.pkl.gz'.format(
-            args.gamma) if args.gmp else 'enc_train.pkl.gz'
+        fname = 'enc_train_color_gmp{}.pkl.gz'.format(
+            args.gamma) if args.gmp else 'enc_train_color.pkl.gz'
         enc_train = fetch_encodings(
             files_train,
             mus,
@@ -299,8 +308,8 @@ if __name__ == '__main__':
             overwrite=args.overwrite
         )
 
-        fname = 'enc_test_gmp{}.pkl.gz'.format(
-            args.gamma) if args.gmp else 'enc_test.pkl.gz'
+        fname = 'enc_test_color_gmp{}.pkl.gz'.format(
+            args.gamma) if args.gmp else 'enc_test_color.pkl.gz'
         enc_test = fetch_encodings(
             files_test,
             mus,
