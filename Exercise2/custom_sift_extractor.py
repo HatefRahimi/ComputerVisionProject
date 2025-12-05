@@ -18,9 +18,9 @@ class CustomSIFTExtractor:
                   ".JPEG", ".tif", ".TIF", ".tiff", ".TIFF"]
 
     def __init__(self,
-                 use_clahe: bool = True,
-                 dense_step: int = 8,
-                 dense_size: int = 8,
+                 use_clahe: bool = False,
+                 dense_step: int = 6,
+                 dense_size: int = 10,
                  sift_nfeatures: int = 4000,
                  sift_contrast: float = 0.005,
                  sift_edge: int = 10,
