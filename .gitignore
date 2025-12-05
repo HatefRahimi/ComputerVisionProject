@@ -222,3 +222,4 @@ __marimo__/
 *.pkl
 *.npy
 *.npz
+*pkl.gz
