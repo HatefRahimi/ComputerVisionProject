@@ -69,7 +69,7 @@ def parseArgs(parser):
 def create_multiple_codebooks(files, n_codebooks=5, n_clusters=100,
                               max_descriptors=1_000_000, seed=42):
     """
-    Create multiple codebooks with different seeds and subsets (Part g)
+    Create multiple codebooks with different seeds and subsets 
 
     parameters:
         files: descriptor files
@@ -95,7 +95,7 @@ def create_multiple_codebooks(files, n_codebooks=5, n_clusters=100,
 
 def multi_vlad_encode(files, codebooks, powernorm, gmp=False, gamma=1000):
     """
-    Compute VLAD for each codebook, then concatenate features (Part g)
+    Compute VLAD for each codebook, then concatenate features 
     Uses the shared vlad() function with gmp parameter!
 
     parameters:
@@ -117,7 +117,7 @@ def multi_vlad_encode(files, codebooks, powernorm, gmp=False, gamma=1000):
 
 def pca_whitening(enc_train, enc_test, n_components=1000, seed=42):
     """
-    PCA with whitening (Part g)
+    PCA with whitening 
     Fit on train, transform test
 
     parameters:
@@ -207,9 +207,9 @@ if __name__ == '__main__':
     # Descriptor statistics
     tr_exist, tr_nonempty, tr_rows = descriptor_stats(files_train)
     te_exist, te_nonempty, te_rows = descriptor_stats(files_test)
-    print(f"[Part (e)] Train descriptors: {tr_exist} files present, "
+    print(f"Train descriptors: {tr_exist} files present, "
           f"{tr_nonempty} non-empty, {tr_rows} total SIFT vectors.")
-    print(f"[Part (e)] Test descriptors: {te_exist} files present, "
+    print(f"Test descriptors: {te_exist} files present, "
           f"{te_nonempty} non-empty, {te_rows} total SIFT vectors.")
 
     # Load descriptors for codebook
@@ -218,7 +218,7 @@ if __name__ == '__main__':
 
     # MULTI-VLAD PATH
     if args.multi_vlad:
-        print("> Part (g): multi-VLAD enabled")
+        print("> multi-VLAD enabled")
         print(
             f"> Using {'GMP' if args.gmp else 'SUM'} pooling with gamma={args.gamma}")
 

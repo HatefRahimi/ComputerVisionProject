@@ -194,64 +194,57 @@ def gmp_pooling(desc, mus, assignment_matrix, gamma):
 
 def vlad(files, mus, powernorm, gmp=False, gamma=1000):
     """
-    Compute VLAD encoding for each file
-
-    This ONE function handles BOTH sum pooling (for group) and GMP (for individual)
-    based on the gmp flag.
-
-    parameters:
-        files: list of N files containing each T local descriptors of dimension D
-        mus:   K x D matrix of cluster centers
-        powernorm: if True, apply signed sqrt (power normalization)
-        gmp:   if True, use Generalized Max Pooling (GMP) - Ridge regression (bonus)
-               if False, use standard sum pooling (default for group solution)
-        gamma: regularization parameter for GMP (only used if gmp=True)
-
-    returns:
-        encodings: N x (K*D) matrix of encodings
-    """
+     compute VLAD encoding for each files
+     parameters:
+         files: list of N files containing each T local descriptors of dimension
+         D
+         mus: KxD matrix of cluster centers
+         gmp: if set to True use generalized max pooling instead of sum pooling
+     returns: NxK*D matrix of encodings
+     """
     K, D = mus.shape
-    N = len(files)
-    encodings = np.zeros((N, K * D), dtype=np.float32)
+     N = len(files)
+      encodings = np.zeros((N, K * D), dtype=np.float32)
 
-    for i, path in enumerate(tqdm(files, desc="VLAD encoding")):
-        with gzip.open(path, 'rb') as ff:
-            desc = cPickle.load(ff, encoding='latin1')   # T x D
+       for i, path in enumerate(tqdm(files, desc="VLAD encoding")):
+            with gzip.open(path, 'rb') as ff:
+                desc = cPickle.load(ff, encoding='latin1')   # T x D
 
-        # guard against empty descriptors
-        if desc is None or len(desc) == 0:
-            continue
+            # guard against empty descriptors
+            if desc is None or len(desc) == 0:
+                continue
 
-        # handle dimension mismatch
-        if desc.shape[1] != D:
-            desc = desc[:, :D]
+            # handle dimension mismatch
+            if desc.shape[1] != D:
+                desc = desc[:, :D]
 
-        # hard assignments: T x K one-hot
-        assignment_matrix = assignments(desc, mus)      # T x K
+            # hard assignments: T x K one-hot
+            assignment_matrix = assignments(desc, mus)      # T x K
 
-        # Choose pooling method based on gmp flag
-        if gmp:
-            # Use GMP (Generalized Max Pooling)
-            pooled_residuals = gmp_pooling(desc, mus, assignment_matrix, gamma)
-        else:
-            # Use standard sum pooling (default)
-            pooled_residuals = sum_pooling(desc, mus, assignment_matrix)
+            # Choose pooling method based on gmp flag
+            if gmp:
+                # Use GMP (Generalized Max Pooling)
+                pooled_residuals = gmp_pooling(
+                    desc, mus, assignment_matrix, gamma)
+            else:
+                # Use standard sum pooling (default)
+                pooled_residuals = sum_pooling(desc, mus, assignment_matrix)
 
-        # flatten to 1D: K*D to have the raw vector
-        f_enc = pooled_residuals.reshape(-1)
+            # flatten to 1D: K*D to have the raw vector
+            f_enc = pooled_residuals.reshape(-1)
 
-        # power normalization (signed sqrt)
-        if powernorm:
-            f_enc = np.sign(f_enc) * np.sqrt(np.abs(f_enc))
+            # power normalization (signed sqrt)
+            if powernorm:
+                f_enc = np.sign(f_enc) * np.sqrt(np.abs(f_enc))
 
-        # L2 normalization
-        norm = np.linalg.norm(f_enc)
-        if norm > 0:
-            f_enc /= norm
+            # L2 normalization
+            norm = np.linalg.norm(f_enc)
+            if norm > 0:
+                f_enc /= norm
 
-        encodings[i] = f_enc
+            encodings[i] = f_enc
 
-    return encodings
+        return encodings
 
 
 def esvm(encs_test, encs_train, C=1000):
@@ -259,10 +252,11 @@ def esvm(encs_test, encs_train, C=1000):
     compute a new embedding using Exemplar Classification
     compute for each encs_test encoding an E-SVM using the
     encs_train as negatives   
+    parameters: 
+        encs_test: NxD matrix
+        encs_train: MxD matrix
 
-    encs_test: N x D
-    encs_train: M x D
-    returns: N x D matrix (new encs_test)
+    returns: new encs_test matrix (NxD)
     """
     N_test, D = encs_test.shape
     N_train = encs_train.shape[0]
@@ -356,8 +350,6 @@ def evaluate(encs, labels):
 
 def fetch_encodings(files, mus, fname, powernorm, gmp, gamma, overwrite=False):
     """
-    Load encodings from disk if present; otherwise compute and save them.
-
     parameters:
         files: list of descriptor files
         mus: codebook (K x D)

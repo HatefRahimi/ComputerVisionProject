@@ -78,7 +78,7 @@ class CustomSIFTExtractor:
         total_rows = 0
         missing = 0
 
-        for base, _ in tqdm(pairs, desc=f"Part (e): building descriptors → {out_folder}"):
+        for base, _ in tqdm(pairs, desc=f"building descriptors → {out_folder}"):
             out_path = os.path.join(out_folder, base + "_SIFT_patch_pr.pkl.gz")
             if os.path.exists(out_path):
                 # count stats and skip re-extraction
@@ -109,8 +109,8 @@ class CustomSIFTExtractor:
 
         if missing > 0:
             print(
-                f"[Part (e)] Warning: {missing} images not found in {search_dirs}.")
-        print(f"[Part (e)] Wrote/kept {produced} descriptor files "
+                f"Warning: {missing} images not found in {search_dirs}.")
+        print(f"Wrote/kept {produced} descriptor files "
               f"({nonempty} non-empty, {total_rows} total SIFT vectors).")
         return produced, nonempty, total_rows
 
