@@ -210,7 +210,7 @@ def vlad(files, mus, powernorm, gmp=False, gamma=1000):
             with gzip.open(path, 'rb') as ff:
                 desc = cPickle.load(ff, encoding='latin1')   # T x D
 
-            # guard against empty descriptors
+            #  empty descriptors safety check
             if desc is None or len(desc) == 0:
                 continue
 
@@ -223,11 +223,11 @@ def vlad(files, mus, powernorm, gmp=False, gamma=1000):
 
             # Choose pooling method based on gmp flag
             if gmp:
-                # Use GMP (Generalized Max Pooling)
+                # GMP
                 pooled_residuals = gmp_pooling(
                     desc, mus, assignment_matrix, gamma)
             else:
-                # Use standard sum pooling (default)
+                # sum pooling
                 pooled_residuals = sum_pooling(desc, mus, assignment_matrix)
 
             # flatten to 1D: K*D to have the raw vector
@@ -291,7 +291,7 @@ def esvm(encs_test, encs_train, C=1000):
         if norm > 0:
             w /= norm
 
-        # we return shape (1, D) so concatenation works
+        # return shape (1, D) so concatenation works
         return w[np.newaxis, :]
 
     # parallel over all test exemplars

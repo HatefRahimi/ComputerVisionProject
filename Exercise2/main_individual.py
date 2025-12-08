@@ -5,18 +5,17 @@ import numpy as np
 import _pickle as cPickle
 from tqdm import tqdm
 
-# Import shared functions - vlad() handles both sum and GMP!
 from skeleton import (
     getFiles,
     loadRandomDescriptors,
     dictionary,
-    vlad,          # ONE function, use gmp=True for GMP, gmp=False for sum
+    vlad,          # one function, use gmp=True for GMP, gmp=False for sum
     esvm,
     evaluate,
     fetch_encodings
 )
 
-# Custom SIFT extractor for part (e)
+# Custom SIFT extractor for part
 from custom_sift_extractor import CustomSIFTExtractor
 
 
@@ -54,13 +53,13 @@ def parseArgs(parser):
 
     # for indie part
     parser.add_argument('--multi_vlad', action='store_true',
-                        help='use multi-VLAD with multiple codebooks (part g)')
+                        help='use multi-VLAD with multiple codebooks')
     parser.add_argument('--n_codebooks', default=5, type=int,
                         help='number of codebooks for multi-VLAD (default: 5)')
     parser.add_argument('--n_clusters', default=100, type=int,
                         help='clusters per codebook (default: 100)')
     parser.add_argument('--pca_components', default=1000, type=int,
-                        help='PCA output dimensionality (with whitening) for part g')
+                        help='PCA output dimensionality (with whitening)')
     return parser
 
 
