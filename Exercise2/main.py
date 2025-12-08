@@ -1,7 +1,3 @@
-"""
-Group Solution: VLAD-based Writer Identification (Parts a-d)
-Uses shared vlad_core module - calls vlad() with gmp=False for sum pooling
-"""
 import os
 import argparse
 import gzip
@@ -13,7 +9,7 @@ from skeleton import (
     getFiles,
     loadRandomDescriptors,
     dictionary,
-    vlad,          # ONE vlad function that handles both sum and GMP
+    vlad,
     esvm,
     evaluate,
     fetch_encodings
@@ -84,8 +80,8 @@ if __name__ == '__main__':
         mus,
         fname,
         powernorm=args.powernorm,
-        gmp=False,      # ← Sum pooling for group solution
-        gamma=1,        # Not used when gmp=False
+        gmp=False,
+        gamma=1,
         overwrite=args.overwrite
     )
 
@@ -95,8 +91,8 @@ if __name__ == '__main__':
         mus,
         fname,
         powernorm=args.powernorm,
-        gmp=False,      # ← Sum pooling for group solution
-        gamma=1,        # Not used when gmp=False
+        gmp=False,
+        gamma=1,
         overwrite=args.overwrite
     )
 

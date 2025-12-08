@@ -100,7 +100,7 @@ def dictionary(descriptors, n_clusters):
         batch_size=10_000,
         max_iter=200,
         verbose=1,
-        random_state=0
+        random_state=42
     )
     mbk.fit(descriptors)
     return mbk.cluster_centers_
@@ -151,7 +151,7 @@ def sum_pooling(desc, mus, assignment_matrix):
 
 def gmp_pooling(desc, mus, assignment_matrix, gamma):
     """
-    Generalized Max Pooling with Ridge regression (Part f - Bonus)
+    Generalized Max Pooling with Ridge regression
 
     parameters:
         desc: TxD descriptor matrix
@@ -231,13 +231,13 @@ def vlad(files, mus, powernorm, gmp=False, gamma=1000):
 
         # Choose pooling method based on gmp flag
         if gmp:
-            # Use GMP (Generalized Max Pooling) - Ridge regression
+            # Use GMP (Generalized Max Pooling)
             pooled_residuals = gmp_pooling(desc, mus, assignment_matrix, gamma)
         else:
             # Use standard sum pooling (default)
             pooled_residuals = sum_pooling(desc, mus, assignment_matrix)
 
-        # flatten to 1D: K*D
+        # flatten to 1D: K*D to have the raw vector
         f_enc = pooled_residuals.reshape(-1)
 
         # power normalization (signed sqrt)

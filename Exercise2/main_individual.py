@@ -1,12 +1,3 @@
-"""
-Individual Solution: VLAD-based Writer Identification with Bonus Features
-- Part (e): Custom SIFT extraction
-- Part (f): Generalized Max Pooling (GMP) - just call vlad(gmp=True)
-- Part (g): Multi-VLAD with PCA whitening
-
-Uses shared vlad_core module - NO need to redefine vlad()!
-Just call vlad(gmp=True) for GMP or vlad(gmp=False) for sum pooling
-"""
 import os
 import argparse
 import gzip
@@ -29,7 +20,7 @@ from skeleton import (
 from custom_sift_extractor import CustomSIFTExtractor
 
 
-# Use the BINARY folders
+# Use the color folders
 TRAIN_IMAGE_DIRS = ["data/icdar2017-training-color"]
 TEST_IMAGE_DIRS = ["data/icdar2017-testing-color"]
 
@@ -61,7 +52,7 @@ def parseArgs(parser):
     parser.add_argument('--C', default=1000, type=float,
                         help='C parameter of the SVM')
 
-    # Bonus part (g)
+    # for indie part
     parser.add_argument('--multi_vlad', action='store_true',
                         help='use multi-VLAD with multiple codebooks (part g)')
     parser.add_argument('--n_codebooks', default=5, type=int,
@@ -73,7 +64,7 @@ def parseArgs(parser):
     return parser
 
 
-# ========== BONUS PART (g): MULTI-VLAD + PCA WHITENING ==========
+# MULTI-VLAD + PCA WHITENING
 
 def create_multiple_codebooks(files, n_codebooks=5, n_clusters=100,
                               max_descriptors=1_000_000, seed=42):
@@ -91,9 +82,8 @@ def create_multiple_codebooks(files, n_codebooks=5, n_clusters=100,
     codebooks = []
     for i in range(n_codebooks):
         print(f"> Building codebook {i+1}/{n_codebooks}")
-        np.random.seed(seed + i)  # different seed per codebook
+        np.random.seed(seed + i)
 
-        # different subset per codebook
         desc_subset = loadRandomDescriptors(
             files, max_descriptors=max_descriptors // max(1, n_codebooks))
         if desc_subset is None or len(desc_subset) == 0:
@@ -120,10 +110,8 @@ def multi_vlad_encode(files, codebooks, powernorm, gmp=False, gamma=1000):
     for ci, mus in enumerate(codebooks):
         print(
             f"> Encoding with codebook {ci+1}/{len(codebooks)} (K={mus.shape[0]}, D={mus.shape[1]})")
-        # Just call the shared vlad() with gmp parameter!
         enc = vlad(files, mus, powernorm=powernorm, gmp=gmp, gamma=gamma)
         enc_list.append(enc.astype(np.float32))
-    # horizontal concat → feature dimension grows
     return np.concatenate(enc_list, axis=1)
 
 
@@ -160,8 +148,6 @@ def pca_whitening(enc_train, enc_test, n_components=1000, seed=42):
     return enc_train_p.astype(np.float32), enc_test_p.astype(np.float32), pca
 
 
-# ========== UTILITY FUNCTIONS ==========
-
 def descriptor_stats(file_list):
     """Get statistics about descriptor files"""
     exist = nonempty = rows = 0
@@ -180,15 +166,13 @@ def descriptor_stats(file_list):
     return exist, nonempty, rows
 
 
-# ========== MAIN EXECUTION ==========
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('retrieval')
     parser = parseArgs(parser)
     args = parser.parse_args()
     np.random.seed(42)
 
-    # ===== PART (e): Build custom descriptors =====
+    # custom descriptors
     os.makedirs(OUT_TRAIN, exist_ok=True)
     os.makedirs(OUT_TEST, exist_ok=True)
 
@@ -232,7 +216,7 @@ if __name__ == '__main__':
     descriptors = loadRandomDescriptors(files_train, max_descriptors=500_000)
     print("Sampled descriptors:", descriptors.shape)
 
-    # ===== PART (g): MULTI-VLAD PATH =====
+    # MULTI-VLAD PATH
     if args.multi_vlad:
         print("> Part (g): multi-VLAD enabled")
         print(
@@ -247,17 +231,17 @@ if __name__ == '__main__':
             seed=42
         )
 
-        # Multi-VLAD encoding - vlad() handles GMP automatically!
+        # Multi-VLAD encoding
         enc_train = multi_vlad_encode(
             files_train, codebooks,
             powernorm=args.powernorm,
-            gmp=args.gmp,      # ← Pass GMP flag to shared vlad()
+            gmp=args.gmp,      # Pass GMP flag to shared vlad()
             gamma=args.gamma
         )
         enc_test = multi_vlad_encode(
             files_test, codebooks,
             powernorm=args.powernorm,
-            gmp=args.gmp,      # ← Pass GMP flag to shared vlad()
+            gmp=args.gmp,
             gamma=args.gamma
         )
         print(
@@ -278,7 +262,7 @@ if __name__ == '__main__':
         print('> evaluate (multi-VLAD + PCA + E-SVM)')
         evaluate(enc_test_esvm, labels_test)
 
-    # ===== SINGLE-CODEBOOK PATH (with optional GMP) =====
+    # SINGLE-CODEBOOK PATH
     else:
         print(
             f"> Using {'GMP' if args.gmp else 'SUM'} pooling with gamma={args.gamma}")
@@ -303,7 +287,7 @@ if __name__ == '__main__':
             mus,
             fname,
             powernorm=args.powernorm,
-            gmp=args.gmp,      # ← Just pass the flag!
+            gmp=args.gmp,
             gamma=args.gamma,
             overwrite=args.overwrite
         )
@@ -315,7 +299,7 @@ if __name__ == '__main__':
             mus,
             fname,
             powernorm=args.powernorm,
-            gmp=args.gmp,      # ← Just pass the flag!
+            gmp=args.gmp,
             gamma=args.gamma,
             overwrite=args.overwrite
         )
@@ -324,7 +308,7 @@ if __name__ == '__main__':
         print('> evaluate')
         evaluate(enc_test, labels_test)
 
-        # E-SVM refinement
+        # E-SVM
         print('> esvm computation')
         print("> running Exemplar‐SVM refinement")
         enc_test = esvm(enc_test, enc_train, C=args.C)

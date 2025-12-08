@@ -1,4 +1,3 @@
-# custom_sift_extractor.py
 import os
 import shlex
 import gzip
@@ -11,7 +10,7 @@ from tqdm import tqdm
 
 class CustomSIFTExtractor:
     """
-    Part (e): Custom SIFT extractor for binary images.
+    Custom SIFT extractor for binary images.
     """
 
     KNOWN_EXTS = [".png", ".PNG", ".jpg", ".JPG", ".jpeg",
@@ -38,7 +37,7 @@ class CustomSIFTExtractor:
         if self.use_clahe:
             self._clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 
-    def computeDescs(self, img_path: str) -> np.ndarray:
+    def computeDescs(self, img_path):
         """
         Return Hellinger-normalized SIFT descriptors (N,128) float32.
         """
@@ -66,7 +65,7 @@ class CustomSIFTExtractor:
 
         return self._hellinger(desc)
 
-    def build_for_split(self, labels_file: str, out_folder: str, search_dirs: List[str]):
+    def build_for_split(self, labels_file, out_folder, search_dirs):
         """
         Build & save descriptors for all basenames in labels_file.
         Returns: (produced_files, nonempty_files, total_rows)
@@ -122,7 +121,7 @@ class CustomSIFTExtractor:
         return [cv2.KeyPoint(float(x), float(y), _size=float(size))
                 for y in range(0, h, step) for x in range(0, w, step)]
 
-    def _hellinger(self, desc: np.ndarray) -> np.ndarray:
+    def _hellinger(self, desc: np.ndarray):
         if desc is None or len(desc) == 0:
             return np.zeros((0, 128), np.float32)
         desc = desc.astype(np.float32)
