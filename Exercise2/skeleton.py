@@ -194,57 +194,53 @@ def gmp_pooling(desc, mus, assignment_matrix, gamma):
 
 def vlad(files, mus, powernorm, gmp=False, gamma=1000):
     """
-     compute VLAD encoding for each files
-     parameters:
-         files: list of N files containing each T local descriptors of dimension
-         D
-         mus: KxD matrix of cluster centers
-         gmp: if set to True use generalized max pooling instead of sum pooling
-     returns: NxK*D matrix of encodings
-     """
+    compute VLAD encoding for each files
+    parameters:
+        files: list of N files containing each T local descriptors of dimension D
+        mus: KxD matrix of cluster centers
+        gmp: if set to True use generalized max pooling instead of sum pooling
+    returns: NxK*D matrix of encodings
+    """
     K, D = mus.shape
-     N = len(files)
-      encodings = np.zeros((N, K * D), dtype=np.float32)
+    N = len(files)
+    encodings = np.zeros((N, K * D), dtype=np.float32)
 
-       for i, path in enumerate(tqdm(files, desc="VLAD encoding")):
-            with gzip.open(path, 'rb') as ff:
-                desc = cPickle.load(ff, encoding='latin1')   # T x D
+    for i, path in enumerate(tqdm(files, desc="VLAD encoding")):
+        with gzip.open(path, 'rb') as ff:
+            desc = cPickle.load(ff, encoding='latin1')
 
-            #  empty descriptors safety check
-            if desc is None or len(desc) == 0:
-                continue
+        # empty descriptors safety check
+        if desc is None or len(desc) == 0:
+            continue
 
-            # handle dimension mismatch
-            if desc.shape[1] != D:
-                desc = desc[:, :D]
+        # handle dimension mismatch
+        if desc.shape[1] != D:
+            desc = desc[:, :D]
 
-            # hard assignments: T x K one-hot
-            assignment_matrix = assignments(desc, mus)      # T x K
+        # hard assignments: T x K one-hot
+        assignment_matrix = assignments(desc, mus)
 
-            # Choose pooling method based on gmp flag
-            if gmp:
-                # GMP
-                pooled_residuals = gmp_pooling(
-                    desc, mus, assignment_matrix, gamma)
-            else:
-                # sum pooling
-                pooled_residuals = sum_pooling(desc, mus, assignment_matrix)
+        # Choose pooling method based on gmp flag
+        if gmp:
+            pooled_residuals = gmp_pooling(desc, mus, assignment_matrix, gamma)
+        else:
+            pooled_residuals = sum_pooling(desc, mus, assignment_matrix)
 
-            # flatten to 1D: K*D to have the raw vector
-            f_enc = pooled_residuals.reshape(-1)
+        # flatten to 1D: K*D
+        f_enc = pooled_residuals.reshape(-1)
 
-            # power normalization (signed sqrt)
-            if powernorm:
-                f_enc = np.sign(f_enc) * np.sqrt(np.abs(f_enc))
+        # power normalization (signed sqrt)
+        if powernorm:
+            f_enc = np.sign(f_enc) * np.sqrt(np.abs(f_enc))
 
-            # L2 normalization
-            norm = np.linalg.norm(f_enc)
-            if norm > 0:
-                f_enc /= norm
+        # L2 normalization
+        norm = np.linalg.norm(f_enc)
+        if norm > 0:
+            f_enc /= norm
 
-            encodings[i] = f_enc
+        encodings[i] = f_enc
 
-        return encodings
+    return encodings  # ← 4 spaces
 
 
 def esvm(encs_test, encs_train, C=1000):

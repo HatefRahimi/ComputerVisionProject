@@ -278,7 +278,7 @@ if __name__ == '__main__':
             with gzip.open('mus_color.pkl.gz', 'rb') as f:
                 mus = cPickle.load(f)
 
-        # VLAD encoding - just pass gmp flag! vlad() handles the rest
+        # VLAD encoding - pass gmp flag vlad() handles the rest
         fname = 'enc_train_color_gmp{}.pkl.gz'.format(
             args.gamma) if args.gmp else 'enc_train_color.pkl.gz'
         enc_train = fetch_encodings(
