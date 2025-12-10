@@ -4,6 +4,8 @@ import gzip
 import numpy as np
 import _pickle as cPickle
 from tqdm import tqdm
+from sklearn.decomposition import PCA
+
 
 from skeleton import (
     getFiles,
@@ -126,7 +128,6 @@ def pca_whitening(enc_train, enc_test, n_components=1000, seed=42):
         seed: random seed
     returns: (enc_train_pca, enc_test_pca, pca_model)
     """
-    from sklearn.decomposition import PCA
 
     if enc_train.size == 0 or enc_test.size == 0:
         print("PCA skipped: empty encodings.")

@@ -267,10 +267,6 @@ def esvm(encs_test, encs_train, C=1000):
         X_neg = encs_train              # shape (M, D)
         X = np.vstack([X_pos, X_neg])   # (1+M, D)
 
-        y = np.empty((1 + N_train,), dtype=np.int8)
-        y[0] = 1
-        y[1:] = -1
-
         # train Linear SVM for this exemplar
         clf = LinearSVC(
             C=C,
