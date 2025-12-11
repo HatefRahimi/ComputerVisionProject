@@ -184,7 +184,8 @@ def gmp_pooling(desc, mus, assignment_matrix, gamma):
             )
             y = np.ones(descriptors_in_cluster, dtype=np.float32)
             ridge.fit(residuals, y)
-            pooled_residuals[k] = ridge.coef_.astype(np.float32)
+            pooled_residuals[k] = ridge.coef_.astype(
+                np.float32)  # the learned weights
         except (np.linalg.LinAlgError, ValueError):
             # fallback to sum pooling
             pooled_residuals[k] = np.sum(residuals, axis=0).astype(np.float32)

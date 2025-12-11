@@ -139,7 +139,7 @@ def linearize_all_images(images, gamma):
 
 
 def weight_function(pixel_values):
-    """Weight function for HDR merging - favors middle-range values"""
+    """Weight function for HDR merging that favors middle-range values"""
 
     weights = 1.0 - np.abs(pixel_values - 0.5) * 2.0
     weights = np.maximum(weights, 0.0)
@@ -163,8 +163,8 @@ def merge_hdr(linearized_images, exposure_times):
         print(f"  Processing image {i + 1}/{len(linearized_images)}")
 
         # Approximate original range for weight calculation
-        img_original_approx = np.power(img, 0.45)
-        weights = weight_function(img_original_approx)
+        # img_original_approx = np.power(img, 0.45)
+        weights = weight_function(img)
 
         # Calculate radiance
         radiance = img / (exp_time + 1e-10)
@@ -201,6 +201,36 @@ def save_result(image, output_path, quality=98):
     image_bgr = cv2.cvtColor(image_uint8, cv2.COLOR_RGB2BGR)
     cv2.imwrite(output_path, image_bgr, [cv2.IMWRITE_JPEG_QUALITY, quality])
     print(f"Saved to: {output_path}")
+
+
+def save_hdr(hdr_image, output_path):
+    """
+    Save HDR image in Radiance .hdr format
+    """
+    output_dir = os.path.dirname(output_path)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # Convert RGB to BGR for OpenCV
+    hdr_bgr = cv2.cvtColor(hdr_image.astype(np.float32), cv2.COLOR_RGB2BGR)
+
+    # Save as .hdr (Radiance RGBE format)
+    success = cv2.imwrite(output_path, hdr_bgr)
+
+    if success:
+        print(f"Saved HDR: {output_path}")
+    else:
+        print(f"WARNING: Failed to save HDR with cv2.imwrite")
+        print("Trying alternative method...")
+
+        # Alternative: Use imageio
+        try:
+            import imageio
+            imageio.imwrite(output_path, hdr_image.astype(
+                np.float32), format='HDR-FI')
+            print(f"Saved HDR with imageio: {output_path}")
+        except Exception as e:
+            print(f"ERROR: Could not save HDR file: {e}")
 
 
 def tonemap_reinhard(hdr):
@@ -244,6 +274,9 @@ def main():
     # Save results
     print("\n Saving results...")
     save_result(ldr_result, "results/hdr_final.jpg", quality=98)
+
+    print("\n Saving HDR file...")
+    save_hdr(hdr_image, "results/hdr_image.hdr")
 
     # Visualize
     plt.figure(figsize=(7, 6))
