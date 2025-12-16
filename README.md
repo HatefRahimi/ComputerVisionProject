@@ -41,40 +41,13 @@ Implementation of classical and modern computer vision algorithms developed duri
 
 `Python` `NumPy` `OpenCV` `scikit-learn` `SciPy` `Matplotlib` `MTCNN` `FaceNet` `rawpy`
 
-## Setup
-
-```bash
-# Clone repository
-git clone https://github.com/yourusername/computer-vision-project.git
-cd computer-vision-project
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run exercises
-cd Exercise2
-python main_individual.py --powernorm --gmp --gamma 1
-```
-
-## Project Structure
-
-```
-computer-vision-project/
-├── Exercise1_RANSAC/
-├── Exercise2_VLAD/
-│   ├── main_individual.py
-│   └── custom_sift_extractor.py
-├── Exercise3_SelectiveSearch/
-├── Exercise4_HDR/
-└── Exercise5_FaceRecognition/
-```
 
 ## Key Results
 
-- **Exercise 1**: Robust plane detection with <5mm error
-- **Exercise 2**: 0.75 mAP on writer identification (grade: 98/100)
+- **Exercise 1**: Robust plane detection using aforementioned algorithms
+- **Exercise 2**: 0.75 mAP on writer identification and 0.88 Top-1 Accuracy on Writer Retrieval
 - **Exercise 3**: ~2000 region proposals with high recall
-- **Exercise 4**: Natural HDR images with proper color reproduction
+- **Exercise 4**: Natural HDR images merged from RAW data with proper color reproduction
 - **Exercise 5**: >90% accuracy on closed-set face identification
 
 ## License
