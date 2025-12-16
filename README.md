@@ -45,11 +45,7 @@ Implementation of classical and modern computer vision algorithms developed duri
 ## Key Results
 
 - **Exercise 1**: Robust plane detection using aforementioned algorithms
-- **Exercise 2**: 0.75 mAP on writer identification and 0.88 Top-1 Accuracy on Writer Retrieval
+- **Exercise 2**: 0.75 mAP on Writer Identification, 0.88 Top-1 Accuracy on Writer Retrieval
 - **Exercise 3**: ~2000 region proposals with high recall
 - **Exercise 4**: Natural HDR images merged from RAW data with proper color reproduction
 - **Exercise 5**: >90% accuracy on closed-set face identification
-
-## License
-
-MIT License - Academic coursework at FAU Erlangen-Nürnberg
